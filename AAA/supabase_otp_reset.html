@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reset Your Password</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #fcfbf7; color: #333333;">
+    <div style="max-width: 600px; margin: 40px auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.08); border: 1px solid #eee;">
+        
+        <!-- Logo Header -->
+        <div style="padding: 40px 20px 20px 20px; text-align: center;">
+            <img src="https://osxvzxwczaapqwcyavdy.supabase.co/storage/v1/object/public/otp/logo.png" alt="CH Bakery & Restaurant" style="width: 120px; height: auto; margin-bottom: 20px;">
+            <div style="height: 2px; width: 60px; background: #c4a141; margin: 0 auto;"></div>
+        </div>
+
+        <!-- content -->
+        <div style="padding: 0 50px 40px 50px; text-align: center;">
+            <h1 style="color: #004d40; font-size: 28px; margin: 0 0 10px 0; font-weight: 700; letter-spacing: -0.5px;">Password Reset</h1>
+            <p style="color: #666666; font-size: 16px; line-height: 1.5; margin: 0 0 30px 0;">We received a request to reset your password. Use the secure code below to proceed.</p>
+            
+            <!-- OTP Block -->
+            <div style="background-color: #fff9f9; border-radius: 12px; padding: 30px; margin: 20px 0; border: 1px solid #fecaca;">
+                <h2 style="color: #dc2626; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 2px; margin: 0 0 15px 0;">Secure Reset Code</h2>
+                <div style="font-size: 42px; font-weight: 800; color: #004d40; letter-spacing: 10px; font-family: 'Courier New', Courier, monospace;">
+                    {{ .Token }}
+                </div>
+            </div>
+            
+            <p style="color: #666666; font-size: 14px; line-height: 1.6; margin-top: 30px;">
+                If you did not request a password reset, you can safely ignore this email. <br>
+                <strong>The code will expire in 10 minutes.</strong>
+            </p>
+        </div>
+
+        <!-- Footer -->
+        <div style="background-color: #004d40; padding: 30px; text-align: center;">
+            <p style="color: #ffffff; font-size: 14px; margin: 0 0 10px 0; font-weight: 600;">CH Restaurant & Bakery</p>
+            <p style="color: rgba(255,255,255,0.6); font-size: 12px; margin: 0; line-height: 1.5;">
+                Officer Club, Near Purana Phatak, Pakpatan Sharif<br>
+                Security Notification
+            </p>
+        </div>
+    </div>
+</body>
+</html>

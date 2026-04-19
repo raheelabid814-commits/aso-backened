@@ -1,0 +1,886 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CH Restaurant</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Main Style -->
+    <link rel="stylesheet" href="style.css">
+    <!-- Supabase JS Library -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- EmailJS for Invoice Emails -->
+    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+</head>
+
+<body class="light-theme">
+    <!-- INITIAL LOADER (2-3 seconds) -->
+    <div id="initial-loader" style="position:fixed; top:0; left:0; width:100%; height:100%; background:var(--bg-color); z-index:9999; display:flex; flex-direction:column; align-items:center; justify-content:center;">
+        <div class="loader-circle-container" style="position:relative; width:200px; height:200px; display:flex; align-items:center; justify-content:center;">
+            <div class="loader-ring ring-1"></div>
+            <div class="loader-ring ring-2"></div>
+            <img src="assets/logo.png" alt="CH" style="width:120px; height:120px; border-radius:50%; object-fit:contain; z-index:10;">
+        </div>
+        <h2 style="margin-top:20px; color:var(--primary-color); font-style:italic; font-weight:800; animation: pulse 1.5s infinite;">CH Restaurant</h2>
+    </div>
+
+    <!-- SPLASH SCREEN: Select Brand -->
+    <div id="splash-screen" class="screen active">
+        <div class="splash-header">
+            <img src="assets/logo.png" alt="CH Restaurant Logo" class="splash-logo">
+            <p>Select a store to continue</p>
+        </div>
+        <div class="brand-cards">
+            <div class="brand-card" onclick="app.navigateTo('fast-food')">
+                <div class="brand-icon"><i class="fa-solid fa-burger"></i></div>
+                <h3>CH Fast Food</h3>
+            </div>
+            <div class="brand-card" onclick="app.navigateTo('bakery')">
+                <div class="brand-icon"><i class="fa-solid fa-cake-candles"></i></div>
+                <h3>CH Bakery</h3>
+            </div>
+            <div class="brand-card" onclick="app.showToast('Grocery is coming soon')">
+                <div class="brand-icon"><i class="fa-solid fa-basket-shopping"></i></div>
+                <h3>CH Grocery <br><span style="font-size:0.7rem; color:gray">(Coming Soon)</span></h3>
+            </div>
+        </div>
+        <div class="splash-footer" id="splash-auth-section">
+            <button class="btn btn-outline" onclick="app.openAuthModal()">Login / Sign Up</button>
+            <button class="btn btn-text" onclick="app.toggleTheme()">
+                <i class="fa-solid fa-moon"></i> Toggle Dark Mode
+            </button>
+        </div>
+    </div>
+
+    <!-- MAIN APP WRAPPER (Hidden initially) -->
+    <div id="main-app" class="screen">
+
+        <!-- TOP HEADER -->
+        <header class="app-header" id="main-global-header">
+            <div class="header-left">
+                <button class="menu-btn" onclick="app.openDrawer()">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
+                <div class="deliver-to" onclick="app.openAddressModal()">
+                    <span class="label">Delivering To</span>
+                    <span class="address-text" id="header-address-text">Select Address...</span>
+                </div>
+            </div>
+            <div class="header-right" style="display:flex; gap:15px; align-items:center;">
+                <div style="position:relative; cursor:pointer;" onclick="app.openView('view-notifications')">
+                    <i class="fa-solid fa-bell notification-icon"></i>
+                    <span id="notif-badge" class="badge" style="display:none;"></span>
+                </div>
+                <i class="fa-solid fa-magnifying-glass search-icon" onclick="app.openSearch()"></i>
+                <div style="position:relative; cursor:pointer;" onclick="app.openCartSheet()">
+                     <i class="fa-solid fa-bag-shopping cart-icon"></i>
+                     <span id="cart-badge-ff" class="badge" style="display:none;"></span>
+                </div>
+                <!-- CH Logo -->
+                <div class="logo">
+                    <img src="assets/logo.png" alt="CH" class="header-logo">
+                </div>
+            </div>
+        </header>
+
+        <!-- DELIVERY / PICKUP TOGGLE -->
+        <div class="order-type-toggle" id="main-order-toggle">
+            <button class="toggle-btn active" id="btn-delivery" onclick="app.setOrderType('delivery')">
+                <i class="fa-solid fa-motorcycle"></i> Delivery
+            </button>
+            <button class="toggle-btn" id="btn-pickup" onclick="app.setOrderType('pickup')">
+                <i class="fa-solid fa-store"></i> Pickup
+            </button>
+        </div>
+
+        <!-- MAIN SCROLLABLE CONTENT AREA -->
+        <main class="content-area">
+
+            <!-- FAST FOOD VIEW -->
+            <div id="view-fast-food" class="view active">
+                <!-- What's New Slider -->
+                <section class="section">
+                    <h3 class="section-title">What's new</h3>
+                    <div class="slider-container" id="promo-slider">
+                        <div class="slider-wrap">
+                            <div class="slide"><img
+                                    src="assets/slider1.jpeg"
+                                    onerror="this.src='https://images.unsplash.com/photo-1513104890138-7c749659a591?w=800&q=80'"
+                                    alt="Promo 1"></div>
+                            <div class="slide"><img
+                                    src="assets/slider2.jpeg"
+                                    onerror="this.src='https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=800&q=80'"
+                                    alt="Promo 2"></div>
+                            <div class="slide"><img
+                                    src="assets/slider3.jpeg"
+                                    onerror="this.src='https://images.unsplash.com/photo-1544982503-9f984c14501a?w=800&q=80'"
+                                    alt="Promo 3"></div>
+                        </div>
+                        <div class="slider-dots"></div>
+                    </div>
+                </section>
+
+                <!-- Explore Menu Grid -->
+                <section class="section">
+                    <div class="section-header">
+                        <h3 class="section-title">Explore Menu</h3>
+                        <a href="javascript:void(0)" class="view-all"
+                            onclick="app.openView('view-menu-categories')">VIEW ALL <i
+                                class="fa-solid fa-arrow-right"></i></a>
+                    </div>
+                    <div class="explore-grid" id="explore-grid">
+                        <!-- Populated via JS -->
+                    </div>
+                </section>
+
+                <!-- Best Sellers (Horizontal Scroll) -->
+                <section class="section">
+                    <h3 class="section-title">Best Sellers</h3>
+                    <div class="horizontal-scroll" id="best-sellers-scroll">
+                        <!-- Populated via JS -->
+                    </div>
+                </section>
+
+                <!-- Top Deals -->
+                <section class="section">
+                    <h3 class="section-title">Top Deals</h3>
+                    <div class="deals-list" id="top-deals-list">
+                        <!-- Populated via JS -->
+                    </div>
+                </section>
+
+                <div class="bottom-padding"></div>
+                <!-- Fast Food Footer -->
+                <div class="ff-footer">
+                    <img src="assets/logo.png" alt="CH Logo">
+                    <p class="ff-footer-brand">CH Restaurant & Bakery</p>
+                    <p>Officer Club, Near Purana Phatak, Pakpattan Sharif</p>
+                    <div class="ff-footer-links">
+                        <a href="javascript:void(0)" onclick="app.openView('view-terms', true)">Terms</a>
+                        <span>|</span>
+                        <a href="javascript:void(0)" onclick="app.openPrivacyPolicy()">Privacy</a>
+                        <span>|</span>
+                        <a href="javascript:void(0)" onclick="app.openView('view-about', true)">About</a>
+                    </div>
+                    <p class="ff-footer-credit">Developed &amp; Designed by <strong>Onix Astral Studio</strong></p>
+                    <p style="font-size:0.7rem; color:var(--text-muted); margin-top:5px;">© 2026 CH Restaurant. All Rights Reserved</p>
+                </div>
+
+            </div><!-- END view-fast-food -->
+
+            <!-- MENU CATEGORIES LIST VIEW -->
+            <div id="view-menu-categories" class="view">
+                <div class="back-header">
+                    <button class="back-btn" onclick="app.goBack()"><i class="fa-solid fa-arrow-left"></i></button>
+                    <h3 id="category-page-title">Menu</h3>
+                </div>
+                <!-- Top Menu: Horizontal Category Scroll -->
+                <div class="horizontal-scroll" id="top-category-scroll" style="background:var(--card-bg); padding:15px; border-bottom:1px solid var(--border-color); position:sticky; top:60px; z-index:9;">
+                    <!-- Populated via JS -->
+                </div>
+                <div class="category-items-list" id="category-items-list">
+                    <!-- Populated via JS -->
+                </div>
+                <div class="bottom-padding"></div>
+            </div>
+
+            <!-- BAKERY VIEW (Tehzeeb Style) -->
+            <div id="view-bakery" class="view" style="background-color: var(--bg-color);">
+                <!-- Top Red Banner Removed as requested -->
+                
+                <!-- Bakery Header (replaces standard header for this view) -->
+                <header style="background:var(--bg-color); border-bottom:1px solid var(--border-color); padding: 15px 20px; display:flex; align-items:center; position:sticky; top:0; z-index:50;">
+                    <div style="flex:1;">
+                        <button style="background:transparent; border:none; font-size:1.4rem; color:var(--text-main); cursor:pointer;" onclick="app.openBakeryDrawer()">
+                            <i class="fa-solid fa-bars"></i>
+                        </button>
+                    </div>
+                    <div style="flex:1; text-align:center;">
+                        <img src="assets/logo.png" alt="CH Bakery" style="width:40px; height:40px; border-radius:50%; object-fit:contain; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
+                    </div>
+                    <div style="flex:1; display:flex; gap:15px; justify-content:flex-end; font-size:1.3rem; color:var(--text-main);">
+                        <div style="position:relative; cursor:pointer;" onclick="app.openView('view-notifications')">
+                            <i class="fa-solid fa-bell"></i>
+                            <span id="notif-badge-bakery" class="badge" style="display:none;"></span>
+                        </div>
+                        <i class="fa-solid fa-magnifying-glass" onclick="app.openSearch()" style="cursor:pointer;"></i>
+                        <div style="position:relative; cursor:pointer;" onclick="app.openCartSheet()">
+                             <i class="fa-solid fa-bag-shopping"></i>
+                             <span id="cart-badge-bakery" class="badge" style="display:none;"></span>
+                        </div>
+                    </div>
+                </header>
+
+                <!-- Bakery Delivery / Pickup Toggle -->
+                <div class="order-type-toggle" id="bakery-order-toggle">
+                    <button class="toggle-btn active" id="btn-delivery-bakery" onclick="app.setOrderType('delivery')">
+                        <i class="fa-solid fa-motorcycle"></i> Delivery
+                    </button>
+                    <button class="toggle-btn" id="btn-pickup-bakery" onclick="app.setOrderType('pickup')">
+                        <i class="fa-solid fa-store"></i> Pickup
+                    </button>
+                </div>
+
+                <!-- Sub-header -->
+                <div style="padding:15px 20px; border-bottom: 1px solid var(--border-color); display:flex; align-items:center; justify-content:space-between; cursor:pointer;" onclick="app.openAddressModal()">
+                    <span style="font-weight:600; font-size:0.85rem; letter-spacing:1px; color:var(--text-main);">HOW DO YOU WANT YOUR PRODUCTS?</span>
+                    <i class="fa-solid fa-chevron-down text-muted"></i>
+                </div>
+
+                <!-- Hero Image -->
+                <div style="width:100%; position:relative;">
+                    <img src="assets/bakery_hero_1776336771297.png" style="width:100%; height:auto; display:block;" alt="Bakery Hero">
+                    <div style="position:absolute; top:20%; left:0; right:0; text-align:center; padding:20px;">
+                        <p style="font-family:'Brush Script MT', cursive; font-size:1.5rem; color:#6b4d31; margin-bottom:5px;">New at CH Bakery</p>
+                        <h2 style="font-size:2.5rem; color:#aa7a47; font-family:'Georgia', serif; font-style:italic; font-weight:normal;">Premium Cake</h2>
+                    </div>
+                </div>
+
+                <!-- Categories Title -->
+                <div style="text-align:center; padding:30px 20px 20px;">
+                    <h3 style="font-weight:700; letter-spacing:3px; font-size:1.2rem; color:var(--text-main);">CATEGORIES</h3>
+                </div>
+
+                <!-- Categories Grid -->
+                <div id="bakery-categories-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; padding:0 20px 30px;">
+                    <!-- Populated via JS -->
+                </div>
+                
+                <!-- Footer Section inside View to match design -->
+                <div style="background-color: var(--card-bg); padding: 40px 20px; text-align:center; margin-top:20px;">
+                    <h4 style="font-size: 1.2rem; margin-bottom: 10px; color:var(--text-main);">Enter the world of CH Bakery</h4>
+                    <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 20px;">News, Bakery Creation & Latest events in stores.</p>
+                    
+                    <div style="display:flex; background:var(--bg-color); border:1px solid var(--border-color); padding:10px 15px; border-radius:4px; margin-bottom:20px; text-align:left;">
+                        <i class="fa-regular fa-envelope" style="color:var(--text-muted); margin-right:10px; margin-top:2px;"></i>
+                        <input type="text" placeholder="Enter your email address *" style="border:none; outline:none; background:transparent; width:100%; font-size:0.9rem; color:var(--text-main);">
+                    </div>
+                    <button style="background:#3f3f3f; color:white; border:none; padding:12px 30px; font-size:0.9rem; margin-bottom:30px; letter-spacing:1px; cursor:pointer; width:150px;" onclick="app.showToast('Subscribed!')">Subscribe</button>
+                    
+                    <div style="border-top:1px solid var(--border-color); text-align:left; color:var(--text-main);">
+                        <div style="padding:15px 0; border-bottom:1px solid var(--border-color); display:flex; justify-content:space-between; font-weight:600; letter-spacing:1px; font-size:0.9rem;" onclick="app.showToast('Categories coming soon')">
+                            Categories <span style="font-size:1.2rem; line-height:1;">+</span>
+                        </div>
+                        <div style="padding:15px 0; border-bottom:1px solid var(--border-color); display:flex; justify-content:space-between; font-weight:600; letter-spacing:1px; font-size:0.9rem;" onclick="app.showToast('Company coming soon')">
+                            Company <span style="font-size:1.2rem; line-height:1;">+</span>
+                        </div>
+                        <div style="padding:15px 0; border-bottom:1px solid var(--border-color); display:flex; justify-content:space-between; font-weight:600; letter-spacing:1px; font-size:0.9rem;" onclick="app.showToast('Services coming soon')">
+                            Services <span style="font-size:1.2rem; line-height:1;">+</span>
+                        </div>
+                        <div style="padding:15px 0; border-bottom:1px solid var(--border-color); display:flex; justify-content:space-between; font-weight:600; letter-spacing:1px; font-size:0.9rem;" onclick="app.showToast('Quick Links coming soon')">
+                            Quick Links <span style="font-size:1.2rem; line-height:1;">+</span>
+                        </div>
+                    </div>
+                    
+                    <div style="display:flex; justify-content:center; gap:15px; margin-top:30px; margin-bottom:20px;">
+                        <div style="width:40px; height:40px; background:var(--bg-color); display:flex; align-items:center; justify-content:center; color:var(--text-muted); border:1px solid var(--border-color); cursor:pointer;"><i class="fa-brands fa-facebook-f"></i></div>
+                        <div style="width:40px; height:40px; background:var(--bg-color); display:flex; align-items:center; justify-content:center; color:var(--text-muted); border:1px solid var(--border-color); cursor:pointer;"><i class="fa-brands fa-instagram"></i></div>
+                        <div style="width:40px; height:40px; background:var(--bg-color); display:flex; align-items:center; justify-content:center; color:var(--text-muted); border:1px solid var(--border-color); cursor:pointer;"><i class="fa-brands fa-pinterest-p"></i></div>
+                    </div>
+                    <div style="font-size:0.75rem; color:var(--text-muted); margin-top:20px; line-height:1.6;">
+                        Copyright ©2026 CH Bakers. All Rights Reserved<br>
+                        Developed & Designed by Onix Astral Studio
+                    </div>
+                </div>
+            </div>
+
+            <!-- BAKERY CATEGORY ITEMS VIEW -->
+            <div id="view-bakery-items" class="view" style="background-color: var(--bg-color);">
+                <div class="back-header" style="background:var(--bg-color);">
+                    <button class="back-btn" onclick="app.openView('view-bakery')"><i class="fa-solid fa-arrow-left"></i></button>
+                    <h3 id="bakery-category-title" style="letter-spacing:1px;">Category</h3>
+                </div>
+                <!-- Categories Sidebar for Desktop / Horizontal scroll for mobile -->
+                <div class="horizontal-scroll" id="bakery-subcat-scroll" style="background:var(--bg-color); padding:15px; border-bottom:1px solid var(--border-color); position:sticky; top:60px; z-index:9;">
+                    <!-- Populated via JS -->
+                </div>
+                <div class="category-items-list" id="bakery-items-list">
+                    <!-- Populated via JS -->
+                </div>
+                <!-- Mini footer -->
+                <div style="background-color: var(--card-bg); padding: 20px; text-align:center; font-size:0.75rem; color:var(--text-muted); border-top:1px solid var(--border-color);">
+                    Copyright ©2026 CH Bakers.<br>Developed & Designed by Onix Astral Studio
+                </div>
+                <div class="bottom-padding"></div>
+            </div>
+
+            <!-- NOTIFICATIONS VIEW -->
+            <div id="view-notifications" class="view">
+                <div class="back-header">
+                    <button class="back-btn" onclick="app.goBack()"><i class="fa-solid fa-arrow-left"></i></button>
+                    <h3>Notifications</h3>
+                </div>
+                <div id="notifications-list" style="padding: 15px;">
+                    <!-- Populated via JS -->
+                    <div class="coming-soon">
+                        <i class="fa-solid fa-bell fa-3x" style="color:var(--primary-color);"></i>
+                        <p>No new notifications.</p>
+                    </div>
+                </div>
+                <div class="bottom-padding"></div>
+            </div>
+
+            <!-- GROCERY VIEW (Placeholder) -->
+            <div id="view-grocery" class="view">
+                <div class="back-header">
+                    <button class="back-btn" onclick="app.goBack()"><i class="fa-solid fa-arrow-left"></i></button>
+                    <h3>CH Grocery</h3>
+                </div>
+                <div class="coming-soon">
+                    <i class="fa-solid fa-basket-shopping fa-3x"></i>
+                    <p>Grocery Store Coming Soon...</p>
+                </div>
+            </div>
+
+            <!-- CHECKOUT VIEW -->
+            <div id="view-checkout" class="view">
+                <div class="back-header">
+                    <button class="back-btn" onclick="app.goBack()"><i class="fa-solid fa-arrow-left"></i></button>
+                    <h3>Checkout</h3>
+                </div>
+                <div class="checkout-container">
+                    <div class="checkout-section">
+                        <h4>Order Details</h4>
+                        <div id="checkout-items"></div>
+                    </div>
+                    <div class="checkout-section">
+                        <h4>Delivery Address</h4>
+                        <div class="checkout-address-box" onclick="app.openAddressModal()">
+                            <i class="fa-solid fa-location-dot"></i>
+                            <span id="checkout-address">Select an address</span>
+                            <i class="fa-solid fa-chevron-right ms-auto"></i>
+                        </div>
+                    </div>
+                    <div class="checkout-section">
+                        <h4>Order Summary</h4>
+                        <div class="summary-row">
+                            <span>Subtotal</span>
+                            <span id="checkout-subtotal">Rs 0</span>
+                        </div>
+                        <div class="summary-row">
+                            <span>Delivery Fee</span>
+                            <span id="checkout-delivery-fee">Rs 50</span>
+                        </div>
+                        <div class="summary-row total">
+                            <span>Total</span>
+                            <span id="checkout-total">Rs 0</span>
+                        </div>
+                    </div>
+                    <button id="btn-checkout" class="btn btn-primary w-100 mt-4 btn-animated"
+                        onclick="app.placeOrder()">Place Order</button>
+                </div>
+                <div class="bottom-padding"></div>
+            </div>
+
+            <!-- MY ORDERS VIEW -->
+            <div id="view-orders" class="view">
+                <div class="back-header">
+                    <button class="back-btn" onclick="app.goBack()"><i class="fa-solid fa-arrow-left"></i></button>
+                    <h3>My Orders</h3>
+                </div>
+                <div class="orders-list" id="my-orders-list">
+                    <!-- Populated via JS -->
+                </div>
+            </div>
+
+            <!-- MY FAVOURITES VIEW -->
+            <div id="view-favourites" class="view">
+                <div class="back-header">
+                    <button class="back-btn" onclick="app.goBack()"><i class="fa-solid fa-arrow-left"></i></button>
+                    <h3>My Favourites</h3>
+                </div>
+                <div class="orders-list" id="favourites-list">
+                    <!-- Populated via JS -->
+                </div>
+            </div>
+
+            <!-- STORE LOCATOR VIEW -->
+            <div id="view-store-locator" class="view">
+                <div class="back-header">
+                    <button class="back-btn" onclick="app.goBack()"><i class="fa-solid fa-arrow-left"></i></button>
+                    <h3>Store Locator</h3>
+                </div>
+                <div class="info-page-content">
+                    <div class="store-card">
+                        <h4><i class="fa-solid fa-store"></i> CH Chaudhary — Main Branch</h4>
+                        <p>Officer Club, Near Purana Phatak, Pakpattan Sharif</p>
+                        <p><i class="fa-solid fa-phone"></i> 0457-380000</p>
+                        <a id="store-maps-link" href="https://maps.app.goo.gl/kGjZ4pLa1Stvh6PF7" target="_blank"
+                            class="btn btn-primary w-100 mt-3">
+                            <i class="fa-solid fa-map-location-dot"></i> Open in Google Maps
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TERMS & CONDITIONS VIEW -->
+            <div id="view-terms" class="view">
+                <div class="back-header">
+                    <button class="back-btn" onclick="app.goBack()"><i class="fa-solid fa-arrow-left"></i></button>
+                    <h3>Terms &amp; Conditions</h3>
+                </div>
+                <div class="info-page-content">
+                    <h4>1. Acceptance of Terms</h4>
+                    <p>By accessing or using the CH Restaurant application, you agree to be bound by these Terms &amp;
+                        Conditions. If you do not agree, please do not use our services.</p>
+                    <h4>2. Orders &amp; Payment</h4>
+                    <p>All orders placed through this app are subject to availability. Prices listed are in Pakistani
+                        Rupees (PKR) and are inclusive of applicable taxes. CH Restaurant reserves the right to change
+                        prices without prior notice.</p>
+                    <h4>3. Delivery Policy</h4>
+                    <p>Delivery is available within Pakpattan city limits. A standard delivery fee of Rs.50 applies.
+                        Estimated delivery time is 30–45 minutes. Delays due to weather or traffic are beyond our
+                        control.</p>
+                    <h4>4. Cancellation &amp; Refunds</h4>
+                    <p>Orders can only be cancelled before they are accepted by our kitchen. Once accepted, no refunds
+                        or cancellations are allowed. In case of incorrect items, please contact us immediately within
+                        10 minutes of delivery.</p>
+                    <h4>5. User Account</h4>
+                    <p>You are responsible for maintaining the confidentiality of your account credentials. CH
+                        Restaurant is not liable for any unauthorized access to your account.</p>
+                    <h4>6. Prohibited Conduct</h4>
+                    <p>Users must not misuse this platform for fraudulent orders, spam, or any activity that disrupts
+                        the service. CH Restaurant reserves the right to suspend any account found in violation.</p>
+                    <h4>7. Governing Law</h4>
+                    <p>These terms are governed by the laws of the Islamic Republic of Pakistan.</p>
+                    <p class="text-muted" style="margin-top:20px;">Last Updated: March 2025</p>
+                </div>
+            </div>
+
+            <!-- PRIVACY POLICY VIEW -->
+            <div id="view-privacy" class="view">
+                <div class="back-header">
+                    <button class="back-btn" onclick="app.goBack()"><i class="fa-solid fa-arrow-left"></i></button>
+                    <h3>Privacy Policy</h3>
+                </div>
+                <div class="info-page-content">
+                    <div class="text-center mb-4">
+                        <i class="fa-solid fa-shield-halved fa-3x" style="color:var(--primary);"></i>
+                    </div>
+                    <h4>1. Information We Collect</h4>
+                    <p>At CH Restaurant & Bakery, we collect minimal information required to fulfill your orders, including your email address for OTP verification and your delivery address. We do not store financial or payment details on our servers.</p>
+                    
+                    <h4>2. Data Usage</h4>
+                    <p>Your data is used solely for order processing and account security. We use industry-standard encryption provided by Supabase to protect your personal information.</p>
+                    
+                    <h4>3. Data Sharing</h4>
+                    <p>We do not sell, trade, or share your data with third-party marketing agencies. Your information stays with us for service improvement only.</p>
+                    
+                    <h4>4. Your Rights</h4>
+                    <p>You can request the permanent deletion of your account and data at any time by contacting us through our official support channels listed in the Help section.</p>
+                    
+                    <p class="mt-4 text-muted" style="font-size:0.8rem;">Last Updated: April 2026</p>
+                </div>
+            </div>
+
+            <!-- HELP & SUPPORT VIEW -->
+            <div id="view-help" class="view">
+                <div class="back-header">
+                    <button class="back-btn" onclick="app.goBack()"><i class="fa-solid fa-arrow-left"></i></button>
+                    <h3>Help & Support</h3>
+                </div>
+                <div class="info-page-content">
+                    <div class="text-center mb-4">
+                        <img src="assets/logo.png" alt="Help" style="width:80px; height:80px; border-radius:50%; margin-bottom:15px;">
+                        <h4 style="color:var(--primary);">How can we help?</h4>
+                        <p class="text-muted">Our team is active 11:00 AM – 2:00 AM</p>
+                    </div>
+
+                    <div style="background:var(--card-bg); border-radius:15px; padding:20px; border:1px solid var(--border-color); margin-bottom:15px;">
+                        <h5 style="margin-bottom:15px;"><i class="fa-solid fa-envelope"></i> Email Us</h5>
+                        <p style="font-size:0.95rem; margin-bottom:10px;">Send us your queries and we'll get back to you within 24 hours.</p>
+                        <a href="mailto:chaudhrybakersofficial@gmail.com" style="color:var(--primary); font-weight:700; text-decoration:none;">chaudhrybakersofficial@gmail.com</a>
+                    </div>
+
+                    <div style="background:var(--card-bg); border-radius:15px; padding:20px; border:1px solid var(--border-color); margin-bottom:15px;">
+                        <h5 style="margin-bottom:15px;"><i class="fa-solid fa-phone"></i> Call Support</h5>
+                        <p style="font-size:0.95rem; margin-bottom:10px;">Immediate assistance for orders and delivery issues.</p>
+                        <a href="tel:0457-380000" style="color:var(--primary); font-weight:700; text-decoration:none;">0457-380000</a>
+                    </div>
+
+                    <div style="padding:20px; border:1px solid var(--border-color); border-radius:15px; background:var(--bg-color); text-align:center;">
+                        <p style="font-size:0.85rem;"><i class="fa-solid fa-location-dot"></i> Officer Club, Near Purana Phatak, Pakpattan Sharif</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ABOUT US VIEW -->
+            <div id="view-about" class="view">
+                <div class="back-header">
+                    <button class="back-btn" onclick="app.goBack()"><i class="fa-solid fa-arrow-left"></i></button>
+                    <h3>About Us</h3>
+                </div>
+                <div class="info-page-content" style="text-align:center;">
+                    <img src="assets/logo.png" alt="CH Logo"
+                        style="width:120px; height:120px; object-fit:contain; margin:0 auto 20px; display:block;">
+                    <h3 style="color:var(--primary);">Chuadhary Sweets &amp; Bakers Mart</h3>
+                    <p style="margin:10px 0; color:var(--text-muted);">Officer Club, Near Purana Phatak, Pakpattan
+                        Sharif</p>
+                    <p style="margin:5px 0;"><i class="fa-solid fa-phone"></i> 0457-380000</p>
+                    <p style="margin:15px 0;">Serving the people of Pakpattan with authentic, fresh, and delicious fast
+                        food since our inception. Our menu is crafted with the finest ingredients to ensure the best
+                        experience.</p>
+                    <div style="background:var(--card-bg); border-radius:12px; padding:15px; margin-top:15px;">
+                        <p><i class="fa-solid fa-clock" style="color:var(--primary);"></i> <strong>Hours:</strong> 11:00
+                            AM – 2:00 AM</p>
+                        <p style="margin-top:8px;"><i class="fa-solid fa-motorcycle" style="color:var(--primary);"></i>
+                            <strong>Delivery:</strong> Pakpattan City Only
+                        </p>
+                    </div>
+                    <p style="font-size:0.75rem; color:var(--text-muted); margin-top:40px;">
+                        Developed & Designed by Onix Astral Studio
+                    </p>
+                </div>
+            </div>
+
+        </main>
+
+        <!-- FLOATING CART REMOVED as requested -->
+        
+    </div> <!-- END MAIN APP WRAPPER -->
+
+    <!-- SIDE DRAWER NAVIGATION -->
+    <div class="drawer-overlay" id="drawer-overlay" onclick="app.closeDrawer()"></div>
+    <div class="side-drawer" id="side-drawer">
+        <div class="drawer-header">
+            <div class="user-profile">
+                <div class="avatar"><i class="fa-regular fa-user"></i></div>
+                <div class="user-info">
+                    <h4 id="drawer-user-name">Guest User</h4>
+                    <p id="drawer-user-email" onclick="app.openAuthModal()">Login / Sign Up</p>
+                </div>
+            </div>
+        </div>
+        <div class="drawer-menu">
+            <a href="javascript:void(0)" class="drawer-item" onclick="app.openView('view-favourites', true)"><i
+                    class="fa-solid fa-heart"></i> My Favorites</a>
+            <a href="javascript:void(0)" class="drawer-item" onclick="app.openAddressModal()"><i
+                    class="fa-solid fa-location-dot"></i> My Addresses</a>
+            <a href="javascript:void(0)" class="drawer-item" onclick="app.openView('view-orders', true)"><i
+                    class="fa-solid fa-list-ul"></i> My Orders</a>
+            <div class="theme-pill-container">
+                <button class="theme-toggle-btn" onclick="app.toggleTheme()">
+                    <div class="theme-pill">
+                        <span class="theme-opt night">Night</span>
+                        <span class="theme-opt day active">Day</span>
+                    </div>
+                </button>
+            </div>
+            <a href="javascript:void(0)" class="drawer-item" onclick="app.openView('view-notifications', true)"><i
+                    class="fa-solid fa-bell"></i> Notifications</a>
+            <a href="javascript:void(0)" class="drawer-item" onclick="app.openStoreLocator()"><i
+                    class="fa-solid fa-location-crosshairs"></i> Store Locator</a>
+            <a href="javascript:void(0)" class="drawer-item" onclick="app.openView('view-menu-categories', true)"><i
+                    class="fa-solid fa-border-all"></i> Explore Menu</a>
+            <a href="javascript:void(0)" class="drawer-item" onclick="app.openHelp()"><i
+                    class="fa-solid fa-circle-question"></i> Help & Support</a>
+            <a href="javascript:void(0)" class="drawer-item" onclick="app.openPrivacyPolicy()"><i
+                    class="fa-solid fa-shield-halved"></i> Privacy Policy</a>
+            <a href="javascript:void(0)" class="drawer-item" onclick="app.navigateTo('splash')"><i class="fa-solid fa-arrow-left"></i> Change Store</a>
+            <!-- Logout Button -->
+            <a href="javascript:void(0)" class="drawer-item text-danger" id="btn-logout" style="display:none;"
+                onclick="app.logout()"><i class="fa-solid fa-arrow-right-from-bracket"></i> Logout</a>
+        </div>
+    </div>
+
+    <!-- BAKERY SIDE DRAWER -->
+    <div class="drawer-overlay" id="bakery-drawer-overlay" onclick="app.closeBakeryDrawer()"></div>
+    <div class="side-drawer" id="bakery-side-drawer" style="background:#f3ebd8; color:#111;">
+        <div class="drawer-header" style="border-bottom:1px solid #ddd;">
+            <div class="user-profile">
+                <div class="avatar" style="border-color:#6b4d31;"><i class="fa-regular fa-user" style="color:#6b4d31;"></i></div>
+                <div class="user-info">
+                    <h4 id="bakery-drawer-user-name" style="color:#111;">Guest User</h4>
+                    <p id="bakery-drawer-user-email" style="color:#6b4d31;" onclick="app.openAuthModal()">Login / Sign Up</p>
+                </div>
+            </div>
+        </div>
+        <div class="drawer-menu" style="padding-top:0;">
+            <a href="javascript:void(0)" class="drawer-item" style="color:#111; font-weight:600;" onclick="app.openView('view-favourites', true)">
+                <i class="fa-solid fa-heart" style="color:#6b4d31;"></i> My Favourites
+            </a>
+            <a href="javascript:void(0)" class="drawer-item" style="color:#111; font-weight:600;" onclick="app.openView('view-orders', true)">
+                <i class="fa-solid fa-list-ul" style="color:#6b4d31;"></i> My Orders
+            </a>
+            <div class="theme-pill-container" style="padding: 10px 25px;">
+                <button class="theme-toggle-btn" onclick="app.toggleTheme()">
+                    <div class="theme-pill">
+                        <span class="theme-opt night" style="color:#6b4d31;">Night</span>
+                        <span class="theme-opt day active" style="background:#6b4d31; color:white;">Day</span>
+                    </div>
+                </button>
+            </div>
+            <a href="javascript:void(0)" class="drawer-item" style="color:#111; font-weight:600;" onclick="app.openStoreLocator()">
+                <i class="fa-solid fa-location-crosshairs" style="color:#6b4d31;"></i> Store Locator
+            </a>
+            <a href="javascript:void(0)" class="drawer-item" style="color:#111; font-weight:600;" onclick="app.openHelp()">
+                <i class="fa-solid fa-circle-question" style="color:#6b4d31;"></i> Help & Support
+            </a>
+            <a href="javascript:void(0)" class="drawer-item" style="color:#111; font-weight:600;" onclick="app.openPrivacyPolicy()">
+                <i class="fa-solid fa-shield-halved" style="color:#6b4d31;"></i> Privacy Policy
+            </a>
+            <hr style="border:none; border-top:1px solid #ddd; margin:10px 20px;">
+        </div>
+        <div class="drawer-menu" id="bakery-drawer-menu" style="padding-top:0;">
+            <!-- Populated via JS -->
+        </div>
+        <div style="margin-top:auto; background:#eee7d6; padding:15px; font-size:0.9rem; font-weight:600; letter-spacing:1px; cursor:pointer;" onclick="app.navigateTo('splash')">
+            <i class="fa-solid fa-arrow-left" style="margin-right:10px;"></i> BACK TO STORES
+        </div>
+    </div>
+
+    <!-- ITEM DETAIL MODAL (Bottom Sheet) -->
+    <div class="modal-overlay" id="item-modal-overlay" onclick="app.closeItemModal()"></div>
+    <div class="bottom-sheet" id="item-modal">
+        <button class="close-sheet" onclick="app.closeItemModal()"><i class="fa-solid fa-xmark"></i></button>
+        <div class="item-modal-content" id="item-modal-content">
+            <!-- Populated via JS -->
+        </div>
+    </div>
+
+    <!-- CART SHEET (Bottom Sheet) -->
+    <div class="modal-overlay" id="cart-overlay" onclick="app.closeCartSheet()"></div>
+    <div class="bottom-sheet cart-sheet" id="cart-sheet">
+        <div class="cart-header">
+            <h3>Your Bucket</h3>
+            <button class="close-sheet" onclick="app.closeCartSheet()"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="cart-items" id="cart-items-list">
+            <!-- Populated via JS -->
+        </div>
+        <div class="cart-footer">
+            <div class="cart-summary-line">
+                <span>Total</span>
+                <span class="font-bold">Rs <span id="cart-sheet-total">0</span></span>
+            </div>
+            <button class="btn btn-primary w-100 mt-3" onclick="app.proceedToCheckout()">Checkout</button>
+        </div>
+    </div>
+
+    <!-- AUTH MODAL (Glassmorphism applied via CSS class glass-auth) -->
+    <div class="modal-overlay" id="auth-overlay" onclick="app.closeAuthModal()"></div>
+    <div class="center-modal glass-auth" id="auth-modal">
+        <button class="close-modal" aria-label="Close auth" onclick="app.closeAuthModal()"><i
+                class="fa-solid fa-xmark"></i></button>
+        <!-- Auth Header Branding -->
+        <div class="text-center mb-3">
+            <img src="assets/logo.png" alt="Logo" style="width:60px; height:60px; border-radius:50%; margin:0 auto; object-fit:contain;">
+            <h4 class="mt-2 text-white">Join CH Restaurant</h4>
+        </div>
+        <div class="auth-tabs glass-tabs">
+            <button class="auth-tab active" onclick="app.switchAuthTab('login')">Login</button>
+            <button class="auth-tab" onclick="app.switchAuthTab('signup')">Sign Up</button>
+        </div>
+
+        <!-- Login Form -->
+        <div id="auth-login-form" class="auth-form active text-white">
+            <div class="form-group">
+                <label>Email Address</label>
+                <input type="email" id="login-email" class="form-control glass-input" placeholder="Enter your email">
+            </div>
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" id="login-password" class="form-control glass-input" placeholder="Enter your password">
+            </div>
+            <div style="text-align:right; margin-bottom:10px;">
+                <a href="javascript:void(0)" onclick="app.forgotPassword()" style="color:var(--primary-color); font-size:0.8rem; text-decoration:none;">Forgot Password?</a>
+            </div>
+            <button id="btn-login" class="btn btn-primary w-100 mt-2 btn-animated" onclick="app.login()">Login</button>
+        </div>
+
+        <!-- Signup Form -->
+        <div id="auth-signup-form" class="auth-form text-white">
+            <div class="form-group">
+                <label>Email Address</label>
+                <input type="email" id="signup-email" class="form-control glass-input" placeholder="Enter your email">
+            </div>
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" id="signup-password" class="form-control glass-input" placeholder="Create password">
+            </div>
+            <div class="form-group">
+                <label>Confirm Password</label>
+                <input type="password" id="signup-confirm-password" class="form-control glass-input" placeholder="Confirm password">
+            </div>
+            <button id="btn-signup" class="btn btn-primary w-100 mt-2 btn-animated" onclick="app.signup()">Create
+                Account</button>
+        </div>
+        
+        <hr style="border-top:1px solid rgba(255,255,255,0.2); margin:20px 0;">
+        <div class="text-center" style="font-size:0.8rem;">
+            <a href="cashier.html" style="color:var(--text-muted); text-decoration:none;"><i class="fa-solid fa-cash-register"></i> Admin / Cashier Panel</a>
+        </div>
+
+        <!-- OTP Verification Form -->
+        <div id="auth-otp-form" class="auth-form">
+            <p class="text-center mb-3">Please check your email for the OTP code.</p>
+            <div class="form-group">
+                <label>Enter OTP Code</label>
+                <input type="text" id="otp-code" class="form-control text-center letter-spacing-2" placeholder="XXXXXX">
+            </div>
+            <button id="btn-verify-otp" class="btn btn-primary w-100 mt-3 btn-animated" onclick="app.verifyOTP()">Verify
+                OTP</button>
+        </div>
+
+        <!-- Forgot Password Form (Step 1: Enter Email) -->
+        <div id="auth-forgot-form" class="auth-form text-white">
+            <div style="text-align:center; margin-bottom:15px;">
+                <i class="fa-solid fa-key fa-2x" style="color:var(--primary-color);"></i>
+                <h5 style="margin-top:10px;">Reset Password</h5>
+                <p style="font-size:0.85rem; color:rgba(255,255,255,0.7);">Enter your email to receive an OTP code</p>
+            </div>
+            <div class="form-group">
+                <label>Email Address</label>
+                <input type="email" id="forgot-email" class="form-control glass-input" placeholder="Enter your registered email">
+            </div>
+            <button id="btn-send-forgot-otp" class="btn btn-primary w-100 mt-3 btn-animated" onclick="app.sendForgotOTP()">Send OTP Code</button>
+            <button class="btn btn-text w-100 mt-2" style="color:rgba(255,255,255,0.6); font-size:0.85rem;" onclick="app.switchAuthTab('login')"><i class="fa-solid fa-arrow-left"></i> Back to Login</button>
+        </div>
+
+        <!-- Reset Password OTP Form (Step 2: Enter OTP + New Password) -->
+        <div id="auth-reset-otp-form" class="auth-form text-white">
+            <div style="text-align:center; margin-bottom:15px;">
+                <i class="fa-solid fa-shield-check fa-2x" style="color:#4ade80;"></i>
+                <h5 style="margin-top:10px;">Enter OTP & New Password</h5>
+                <p style="font-size:0.85rem; color:rgba(255,255,255,0.7);">Check your email for the 6-digit OTP code</p>
+            </div>
+            <div class="form-group">
+                <label>OTP Code</label>
+                <input type="text" id="reset-otp-code" class="form-control glass-input text-center" placeholder="Enter 6-digit OTP" maxlength="6" inputmode="numeric" style="letter-spacing:5px; font-size:1.2rem;">
+            </div>
+            <div class="form-group">
+                <label>New Password</label>
+                <input type="password" id="reset-new-password" class="form-control glass-input" placeholder="Enter new password (min 6 chars)">
+            </div>
+            <div class="form-group">
+                <label>Confirm New Password</label>
+                <input type="password" id="reset-confirm-password" class="form-control glass-input" placeholder="Confirm new password">
+            </div>
+            <button id="btn-verify-reset-otp" class="btn btn-primary w-100 mt-3 btn-animated" onclick="app.verifyResetOTP()"><i class="fa-solid fa-lock"></i> Reset Password</button>
+            <button class="btn btn-text w-100 mt-2" style="color:rgba(255,255,255,0.6); font-size:0.85rem;" onclick="app.forgotPassword()"><i class="fa-solid fa-arrow-left"></i> Re-send OTP</button>
+        </div>
+
+        <div id="auth-error" class="text-danger text-center mt-3" style="display:none; font-size: 0.9rem;"></div>
+        <div id="auth-success" class="text-success text-center mt-3" style="display:none; font-size: 0.9rem;"></div>
+    </div>
+
+    <!-- ADDRESS DIRECTORY MODAL -->
+    <div class="modal-overlay" id="address-overlay"></div>
+    <div class="center-modal" id="address-modal">
+        <button class="close-modal" onclick="app.closeAddressModal()"><i class="fa-solid fa-xmark"></i></button>
+        <h3 class="mb-3">My Addresses</h3>
+        <div id="address-list" class="address-list mb-3">
+            <!-- Populated via JS -->
+        </div>
+        <div class="new-address-form">
+            <h5>Add New Address</h5>
+            <div class="form-group">
+                <label>City</label>
+                <input type="text" id="new-address-city" class="form-control" value="Pakpattan" readonly
+                    style="background-color: var(--bg-color); color: var(--text-muted); cursor: not-allowed;">
+            </div>
+            <div class="form-group">
+                <label>Colony / Area</label>
+                <input type="text" id="new-address-area" class="form-control" placeholder="e.g. Fareed Nagar">
+            </div>
+            <div class="form-group">
+                <label>Nearest Landmark</label>
+                <input type="text" id="new-address-landmark" class="form-control" placeholder="e.g. Near City Hospital">
+            </div>
+            <button class="btn btn-outline w-100" onclick="app.saveNewAddress()">Save Address</button>
+        </div>
+    </div>
+
+    <!-- TOAST NOTIFICATION -->
+    <div id="toast" class="toast">Message</div>
+
+    <!-- SEARCH SYSTEM OVERLAY -->
+    <div class="modal-overlay" id="search-overlay" onclick="app.closeSearch()"></div>
+    <div class="bottom-sheet" id="search-sheet" style="height:85vh; padding:0; overflow:hidden; display:flex; flex-direction:column; border-radius:24px 24px 0 0;">
+        <div class="cart-header" style="background:var(--card-bg); padding:20px; z-index:10; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
+            <h3 style="flex:1;">Search Items</h3>
+            <button class="close-sheet" onclick="app.closeSearch()"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div style="padding:15px; background:var(--bg-color); z-index:10;">
+            <input type="text" id="search-input" class="form-control" placeholder="Search pizza, cake, biryani..." onkeyup="app.handleSearch()" style="border-radius:20px; text-indent:10px;">
+        </div>
+        <div class="explore-grid" id="search-results-list" style="padding:15px; padding-bottom:50px; overflow-y:auto; flex:1;">
+            <!-- Populated via JS -->
+            <p class="text-center text-muted w-100 mt-4" style="grid-column:1/-1;">Type something to start searching.</p>
+        </div>
+    </div>
+
+    <!-- INVOICE MODAL (Order Confirmation) -->
+    <div class="modal-overlay" id="invoice-overlay"></div>
+    <div class="center-modal" id="invoice-modal" style="max-width:420px; padding:0; overflow:hidden; border-radius:20px;">
+        <!-- Invoice Header -->
+        <div style="background: linear-gradient(135deg, var(--primary-color), #e65100); padding:25px 20px; text-align:center; color:white;">
+            <img src="assets/logo.png" alt="CH" style="width:55px; height:55px; border-radius:50%; object-fit:contain; border:3px solid rgba(255,255,255,0.4); margin-bottom:10px;">
+            <h3 style="font-weight:800; margin:0;">Order Confirmed! 🎉</h3>
+            <p style="font-size:0.85rem; opacity:0.9; margin:5px 0 0;">Your order has been received</p>
+        </div>
+        <!-- Invoice Body -->
+        <div style="padding:20px; background:var(--card-bg);">
+            <div style="display:flex; justify-content:space-between; font-size:0.85rem; margin-bottom:15px; padding-bottom:15px; border-bottom:2px dashed var(--border-color);">
+                <div>
+                    <div style="font-weight:700; font-size:1rem; color:var(--primary-color);" id="inv-order-id"></div>
+                    <div style="color:var(--text-muted); font-size:0.8rem;" id="inv-date"></div>
+                </div>
+                <div style="text-align:right;">
+                    <div style="font-size:0.8rem; color:var(--text-muted);">Customer</div>
+                    <div style="font-weight:600; font-size:0.85rem;" id="inv-customer"></div>
+                </div>
+            </div>
+            <div style="font-size:0.82rem; color:var(--text-muted); margin-bottom:10px;">
+                <span><i class="fa-solid fa-motorcycle"></i> <span id="inv-type"></span></span>
+                &nbsp;&nbsp;
+                <span><i class="fa-solid fa-location-dot"></i> <span id="inv-address"></span></span>
+            </div>
+            <!-- Items Table -->
+            <table style="width:100%; font-size:0.88rem; border-collapse:collapse; margin:10px 0;">
+                <thead>
+                    <tr style="border-bottom:1px solid var(--border-color); color:var(--text-muted);">
+                        <th style="text-align:left; padding:5px 0;">Qty</th>
+                        <th style="text-align:left;">Item</th>
+                        <th style="text-align:right;">Amount</th>
+                    </tr>
+                </thead>
+                <tbody id="inv-items-body"></tbody>
+            </table>
+            <!-- Totals -->
+            <div style="border-top:2px dashed var(--border-color); padding-top:10px; margin-top:5px;">
+                <div style="display:flex; justify-content:space-between; font-size:0.88rem; margin-bottom:5px;">
+                    <span style="color:var(--text-muted);">Subtotal</span>
+                    <span>Rs <span id="inv-subtotal"></span></span>
+                </div>
+                <div style="display:flex; justify-content:space-between; font-size:0.88rem; margin-bottom:8px;">
+                    <span style="color:var(--text-muted);">Delivery Fee</span>
+                    <span>Rs <span id="inv-delivery"></span></span>
+                </div>
+                <div style="display:flex; justify-content:space-between; font-size:1.1rem; font-weight:800; color:var(--primary-color);">
+                    <span>Total</span>
+                    <span>Rs <span id="inv-total"></span></span>
+                </div>
+            </div>
+            <!-- Thank you message -->
+            <div style="background:linear-gradient(135deg,rgba(var(--primary-rgb),0.1),rgba(var(--primary-rgb),0.05)); border-radius:10px; padding:12px; margin-top:15px; text-align:center;">
+                <p style="font-size:0.85rem; font-weight:600; margin:0; color:var(--primary-color);">🙏 Thank you for choosing CH Restaurant!</p>
+                <p style="font-size:0.75rem; color:var(--text-muted); margin:4px 0 0;">Estimated delivery: 30-45 minutes</p>
+            </div>
+        </div>
+        <!-- Invoice Footer -->
+        <div style="padding:15px 20px; background:var(--bg-color); display:flex; gap:10px;">
+            <button class="btn btn-outline" style="flex:1;" onclick="window.print()"><i class="fa-solid fa-print"></i> Print</button>
+            <button class="btn btn-primary" style="flex:2;" onclick="app.closeInvoiceModal()"><i class="fa-solid fa-check"></i> Done</button>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+
+</html>

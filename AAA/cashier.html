@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CH Cashier Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- ✅ SUPABASE SDK - ZARORI HAI! -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="cashier.css">
+</head>
+<body class="bg-gray-100">
+
+    <!-- PIN Login -->
+    <div id="pin-screen" class="pin-screen active">
+        <div class="pin-box">
+            <h2 class="mb-4 text-center" style="color:#00695c; font-weight:800; font-style:italic;">CH Cashier Panel</h2>
+            <p class="text-center text-muted mb-4">Enter 4-digit PIN</p>
+            <input type="password" id="pin-input" class="form-control text-center letter-spacing-2" style="font-size:2rem; letter-spacing:10px;" maxlength="4" placeholder="••••">
+            <button class="btn btn-primary w-100 mt-4" onclick="cashier.login()">Login</button>
+            <p id="pin-error" class="text-danger text-center mt-3" style="display:none;">Invalid PIN</p>
+            <div class="mt-3 text-center">
+                <a href="index.html" class="text-muted" style="text-decoration:none;"><i class="fa-solid fa-arrow-left"></i> Back to Customer App</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Dashboard -->
+    <div id="dashboard" class="dashboard">
+        
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2>CH Panel</h2>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="#" class="nav-item active" onclick="cashier.switchTab('orders', this)"><i class="fa-solid fa-receipt"></i> Active Orders</a>
+                <a href="#" class="nav-item" onclick="cashier.switchTab('menu', this)"><i class="fa-solid fa-tags"></i> Price Editor</a>
+                <a href="#" class="nav-item" onclick="cashier.logout()"><i class="fa-solid fa-sign-out-alt"></i> Logout</a>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            
+            <header class="top-header">
+                <h3 id="page-title">Active Orders</h3>
+                <div class="header-actions">
+                    <span id="datetime">Time</span>
+                    <span id="supabase-count" style="font-size:0.75rem; color:#00897b; background:#e0f2f1; padding:4px 10px; border-radius:20px;">Connecting...</span>
+                    <button class="btn btn-sm btn-outline" onclick="cashier.loadData()"><i class="fa-solid fa-arrows-rotate"></i> Refresh</button>
+                </div>
+            </header>
+
+            <!-- Orders Tab -->
+            <div id="tab-orders" class="tab-pane active">
+                
+                <!-- Revenue Summary Widgets -->
+                <div class="widgets-row">
+                    <div class="widget-card">
+                        <div class="widget-icon"><i class="fa-solid fa-coins"></i></div>
+                        <div class="widget-info">
+                            <span class="widget-label">Today's Revenue</span>
+                            <h3 class="widget-value" id="val-revenue">Rs 0</h3>
+                        </div>
+                    </div>
+                    <div class="widget-card">
+                        <div class="widget-icon"><i class="fa-solid fa-bag-shopping"></i></div>
+                        <div class="widget-info">
+                            <span class="widget-label">Total Orders</span>
+                            <h3 class="widget-value" id="val-orders">0</h3>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card mt-4">
+                    <div class="card-header">
+                        <h4>Recent Orders</h4>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Order #</th>
+                                    <th>Time</th>
+                                    <th>Customer</th>
+                                    <th>Type</th>
+                                    <th>Status</th>
+                                    <th>Total</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="orders-tbody">
+                                <!-- Populated via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Menu / Price Editor Tab -->
+            <div id="tab-menu" class="tab-pane">
+                <div class="card">
+                    <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                        <h4>Menu Price Editor</h4>
+                        <div style="display:flex; gap:10px;">
+                            <select id="menu-cat-filter" class="form-control" style="width:160px; padding:8px;" onchange="cashier.filterMenu()">
+                                <option value="all">All Categories</option>
+                                <option value="fast-food">Fast Food Only</option>
+                                <option value="bakery">Bakery Only</option>
+                            </select>
+                            <input type="text" id="menu-search" class="form-control" style="width:200px; padding:8px 15px;" placeholder="Search item..." onkeyup="cashier.filterMenu()">
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Item</th>
+                                    <th>Category</th>
+                                    <th>Current Price (Rs)</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="menu-tbody">
+                                <!-- Populated via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- Order Detail Modal -->
+    <div class="modal-overlay" id="order-modal-overlay" onclick="cashier.closeOrderModal()"></div>
+    <div class="center-modal" id="order-modal">
+        <button class="close-modal" onclick="cashier.closeOrderModal()"><i class="fa-solid fa-xmark"></i></button>
+        <h4 class="mb-3">Order Invoice: <span id="modal-order-id"></span></h4>
+        <div id="print-area">
+            <div class="invoice-meta mb-3">
+                <div><strong>Customer:</strong> <span id="modal-order-customer"></span></div>
+                <div><strong>Type:</strong> <span id="modal-order-type"></span></div>
+                <div><strong>Address:</strong> <span id="modal-order-address"></span></div>
+                <div><strong>Time:</strong> <span id="modal-order-time"></span></div>
+            </div>
+            <table class="table invoice-table">
+                <thead>
+                    <tr><th>Qty</th><th>Item</th><th style="text-align:right;">Subtotal</th></tr>
+                </thead>
+                <tbody id="modal-order-items"></tbody>
+                <tfoot>
+                    <tr><td colspan="2" style="text-align:right;">Total:</td><th style="text-align:right;">Rs <span id="modal-order-total"></span></th></tr>
+                </tfoot>
+            </table>
+        </div>
+        <div class="mt-4" id="order-modal-actions" style="display:flex; justify-content:space-between; gap:10px;">
+            <button class="btn btn-outline" onclick="window.print()"><i class="fa-solid fa-print"></i> Print</button>
+            <div style="display:flex; gap:10px;">
+                <button id="btn-prepare" class="btn btn-primary" style="background:#f39c12;" onclick="cashier.updateStatus('Prepared')">Prepare Order</button>
+                <button id="btn-complete" class="btn btn-primary" onclick="cashier.updateStatus('Completed')">Mark Complete</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Price Edit Modal -->
+    <div class="modal-overlay" id="price-modal-overlay" onclick="cashier.closePriceModal()"></div>
+    <div class="center-modal" id="price-modal">
+        <h4 class="mb-3">Edit Price</h4>
+        <div class="form-group">
+            <label>Item Name</label>
+            <input type="text" readonly id="edit-item-name" class="form-control" style="background:#f0f0f0;">
+        </div>
+        
+        <div id="single-price-edit" style="display:none;">
+            <div class="form-group">
+                <label>New Price (Rs)</label>
+                <input type="number" id="edit-item-price" class="form-control">
+            </div>
+        </div>
+
+        <div id="multi-price-edit" style="display:none;">
+            <label>Sizes Prices (Rs)</label>
+            <div id="sizes-inputs"></div>
+        </div>
+
+        <input type="hidden" id="edit-item-id">
+        <input type="hidden" id="edit-item-type">
+
+        <div class="mt-4" style="display:flex; justify-content:flex-end; gap:10px;">
+            <button class="btn btn-sm" onclick="cashier.closePriceModal()">Cancel</button>
+            <button class="btn btn-sm btn-primary" onclick="cashier.savePrice()">Save Changes</button>
+        </div>
+    </div>
+
+    <script src="app.js?v=20260418"></script>
+    <script src="cashier.js?v=20260418"></script>
+</body>
+</html>

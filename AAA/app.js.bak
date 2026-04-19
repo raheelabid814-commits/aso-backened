@@ -1,0 +1,1065 @@
+/* =========================================
+   CH Restaurant - Main App Logic
+   ========================================= */
+
+/* --- SUPABASE CONFIGURATION --- */
+// DO NOT LEAVE THESE BLANK FOR PRODUCTION
+const SUPABASE_URL = 'https://osxvzxwczaapqwcyavdy.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_oViAIWwBt2y7MDUHn11Vyw_71nAzze5';
+
+// Initialize Supabase Client
+let supabaseClient = null;
+if (window.supabase) {
+    supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+}
+
+/* --- MENU DATA (Fast Food) --- */
+const categories = [
+    { id: 'appetizer', name: 'Appetizer', icon: 'https://cdn-icons-png.flaticon.com/512/3274/3274099.png' },
+    { id: 'fried_corner', name: 'Fried Corner', icon: 'https://cdn-icons-png.flaticon.com/512/3413/3413645.png' },
+    { id: 'shawarma', name: 'Shawarma', icon: 'https://cdn-icons-png.flaticon.com/512/8779/8779901.png' },
+    { id: 'pizza', name: 'Pizza', icon: 'https://cdn-icons-png.flaticon.com/512/3132/3132693.png' },
+    { id: 'pasta', name: 'Pasta', icon: 'https://cdn-icons-png.flaticon.com/512/5787/5787103.png' },
+    { id: 'wings', name: 'Wings', icon: 'https://cdn-icons-png.flaticon.com/512/2855/2855523.png' },
+    { id: 'sandwich', name: 'Sandwich', icon: 'https://cdn-icons-png.flaticon.com/512/1046/1046751.png' },
+    { id: 'beverages', name: 'Beverages', icon: 'https://cdn-icons-png.flaticon.com/512/2738/2738730.png' },
+    { id: 'deserts', name: 'Desserts', icon: 'https://cdn-icons-png.flaticon.com/512/2900/2900010.png' },
+    { id: 'hot_beverages', name: 'Hot Beverages', icon: 'https://cdn-icons-png.flaticon.com/512/624/624263.png' },
+    { id: 'kids_meal', name: 'Kids Meal', icon: 'https://cdn-icons-png.flaticon.com/512/2012/2012571.png' },
+    { id: 'deals', name: 'Deals', icon: 'https://cdn-icons-png.flaticon.com/512/878/878052.png' }
+];
+
+// Base Prices (Overridable from Cashier Panel via LocalStorage)
+const rawMenuData = [
+    // Appetizer
+    { id: 'a1', category: 'appetizer', title: 'Chaudhary Platter', price: 750, desc: '4 Pcs Spin Rolls, 6 Pcs Oven Baked Wings, French Fries & Dip Sauce', isBestSeller: true },
+    { id: 'a2', category: 'appetizer', title: 'Malai Boti Platter', price: 900, desc: '4 Pcs Malai Boti Rolls, 6 Pcs Oven Baked Wings, French Fries & Dip Sauce', isBestSeller: false },
+    { id: 'a3', category: 'appetizer', title: 'Malai Boti Spin Rolls', price: 580, desc: '', isBestSeller: false },
+    { id: 'a4', category: 'appetizer', title: 'Chicken Spin Rolls', price: 650, desc: '', isBestSeller: true },
+    { id: 'a5', category: 'appetizer', title: 'Shawarma Spin Rolls', price: 600, desc: '', isBestSeller: false },
+    { id: 'a6', category: 'appetizer', title: 'Seekh Kabab Spin Rolls', price: 580, desc: '', isBestSeller: false },
+    { id: 'a7', category: 'appetizer', title: 'Garlic Bread (4 Pcs)', price: 220, desc: '', isBestSeller: false },
+    { id: 'a8', category: 'appetizer', title: 'Garlic Bread Supreme (4 Pcs)', price: 330, desc: '', isBestSeller: false },
+    { id: 'a9', category: 'appetizer', title: 'Chicken Cheese Stick', price: 520, desc: '', isBestSeller: false },
+
+    // Fried Corner (Items with complex sizing)
+    { id: 'f1', category: 'fried_corner', title: 'Fried Wings', price: 320, hasSizes: true, sizes: [{ name: '5 Pcs', price: 320 }, { name: '10 Pcs', price: 600 }], isBestSeller: false },
+    { id: 'f2', category: 'fried_corner', title: 'Nuggets', price: 320, hasSizes: true, sizes: [{ name: '5 Pcs', price: 320 }, { name: '10 Pcs', price: 600 }], isBestSeller: false },
+    { id: 'f3', category: 'fried_corner', title: 'French Fries', price: 300, hasSizes: true, sizes: [{ name: 'Half', price: 300 }, { name: 'Full', price: 450 }], isBestSeller: true },
+    { id: 'f4', category: 'fried_corner', title: 'Mayo Fries', price: 350, hasSizes: true, sizes: [{ name: 'Half', price: 350 }, { name: 'Full', price: 550 }], isBestSeller: false },
+    { id: 'f5', category: 'fried_corner', title: 'Loaded Fries', price: 370, hasSizes: true, sizes: [{ name: 'Half', price: 370 }, { name: 'Full', price: 550 }], isBestSeller: true },
+    { id: 'f6', category: 'fried_corner', title: 'Zinger Burger', price: 450, desc: 'Crispy fried chicken fillet', isBestSeller: true },
+    { id: 'f7', category: 'fried_corner', title: 'Zinger Cheese Burger', price: 550, desc: '', isBestSeller: false },
+    { id: 'f8', category: 'fried_corner', title: 'Chicken Burger', price: 350, desc: '', isBestSeller: false },
+    { id: 'f9', category: 'fried_corner', title: 'Grilled Burger', price: 550, desc: '', isBestSeller: false },
+
+    // Shawarma
+    { id: 's1', category: 'shawarma', title: 'Shawarma', price: 250, desc: '', isBestSeller: true },
+    { id: 's2', category: 'shawarma', title: 'Zinger Shawarma', price: 400, desc: '', isBestSeller: false },
+    { id: 's3', category: 'shawarma', title: 'Paratha', price: 280, desc: '', isBestSeller: false },
+    { id: 's4', category: 'shawarma', title: 'Shawarma Platter', price: 380, desc: '', isBestSeller: false },
+    { id: 's5', category: 'shawarma', title: 'Zinger Platter', price: 550, desc: '', isBestSeller: false },
+
+    // Pizza (Complex structure)
+    {
+        id: 'p_trad', category: 'pizza', title: 'Traditional Pizza', type: 'pizza', isBestSeller: true, price: 550,
+        flavors: ['Chicken Tikka', 'Chicken Fajita', 'Fajita Sicilion', 'Chicken Supreme', 'Euro', 'Cheese Lover', 'Veggie Lover'],
+        sizes: [{ name: 'Small', price: 550 }, { name: 'Medium', price: 1120 }, { name: 'Large', price: 1480 }, { name: 'Extra Large', price: 2399 }]
+    },
+    {
+        id: 'p_spec', category: 'pizza', title: 'Special Pizza', type: 'pizza', isBestSeller: false, price: 599,
+        flavors: ['Chaudhary Special', 'Malai Boti', 'Bihari Kabab', 'Steak Supreme', 'Chef\'s Special'],
+        sizes: [{ name: 'Small', price: 599 }, { name: 'Medium', price: 1199 }, { name: 'Large', price: 1650 }, { name: 'Extra Large', price: 2550 }]
+    },
+    {
+        id: 'p_square', category: 'pizza', title: 'Square Special Pizza', type: 'pizza', isBestSeller: false, price: 650,
+        flavors: ['Chaudhary Special', 'Malai Boti', 'Bihari Kabab'],
+        sizes: [{ name: 'Small', price: 650, note: '' }, { name: 'Medium', price: 1430, note: '+Rs.150 for Bihari Kabab' }, { name: 'Large', price: 1999, note: '+Rs.200 for Bihari Kabab' }]
+    },
+    {
+        id: 'p_stuffer', category: 'pizza', title: 'Stuffer Pizza', type: 'pizza', isBestSeller: false, price: 1630,
+        flavors: ['Chicken Cheese Stuffer', 'Chicken Kabab Stuffer', 'Cheese Stuffer'],
+        sizes: [{ name: 'Medium', price: 1630 }, { name: 'Large', price: 2270 }, { name: 'Extra Large', price: 2600 }]
+    },
+    {
+        id: 'p_crown', category: 'pizza', title: 'Crown Crust Pizza', type: 'pizza', isBestSeller: true, price: 1630,
+        flavors: ['Chaudhary Special', 'Malai Boti', 'Bihari Kabab'],
+        sizes: [{ name: 'Medium', price: 1630 }, { name: 'Large', price: 2270 }, { name: 'Extra Large', price: 2650 }]
+    },
+
+    // Pasta
+    { id: 'pa1', category: 'pasta', title: 'Chaudhary Special Pasta', price: 490, hasSizes: true, sizes: [{ name: 'Half', price: 490 }, { name: 'Full', price: 810 }], isBestSeller: true },
+    { id: 'pa2', category: 'pasta', title: 'Macaroni Pasta', price: 490, hasSizes: true, sizes: [{ name: 'Half', price: 490 }, { name: 'Full', price: 810 }], isBestSeller: false },
+    { id: 'pa3', category: 'pasta', title: 'Creamy Pasta', price: 499, hasSizes: true, sizes: [{ name: 'Half', price: 499 }, { name: 'Full', price: 810 }], isBestSeller: false },
+    { id: 'pa4', category: 'pasta', title: 'Crunchy Pasta', price: 550, hasSizes: true, sizes: [{ name: 'Half', price: 550 }, { name: 'Full', price: 890 }], isBestSeller: false },
+
+    // Special Juices
+    { id: 'j1', category: 'beverages', title: 'Mint Margritta', price: 250, hasSizes: true, sizes: [{ name: 'Large', price: 250 }, { name: 'Jumbo', price: 300 }], isBestSeller: true },
+    { id: 'j2', category: 'beverages', title: 'Lemon Add', price: 200, hasSizes: true, sizes: [{ name: 'Large', price: 200 }, { name: 'Jumbo', price: 250 }], isBestSeller: false },
+    { id: 'j3', category: 'beverages', title: 'Strawberry Juice', price: 200, hasSizes: true, sizes: [{ name: 'Large', price: 200 }, { name: 'Jumbo', price: 250 }], isBestSeller: false },
+    { id: 'j4', category: 'beverages', title: 'BlueBerry Slash', price: 200, hasSizes: true, sizes: [{ name: 'Large', price: 200 }, { name: 'Jumbo', price: 275 }], isBestSeller: false },
+    { id: 'j5', category: 'beverages', title: 'Cold Coffee', price: 300, hasSizes: true, sizes: [{ name: 'Large', price: 300 }, { name: 'Jumbo', price: 400 }], isBestSeller: true },
+    { id: 'j6', category: 'beverages', title: 'Peach Margrita', price: 225, hasSizes: true, sizes: [{ name: 'Large', price: 225 }, { name: 'Jumbo', price: 275 }], isBestSeller: false },
+
+    // All-Day Deals
+    { id: 'ad1', category: 'deals', title: 'Deal for 1 Person', price: 599, desc: '1 Personal Pan Pizza (any flavour), 2 Pcs Oven Baked Wings, 1 Pc Hot Garlic Bread', isDeal: true },
+    { id: 'ad2', category: 'deals', title: 'Deal for 2 Person', price: 1399, desc: '1 Regular Pizza (any flavour), 4 Pcs Oven Baked Wings, 2 Pcs Hot Garlic Bread', isDeal: true },
+    { id: 'ad3', category: 'deals', title: 'Deal for 3 Person', price: 2099, desc: '1 Large Pizza (any flavour), 6 Pcs Oven Baked Wings, 4 Pcs Hot Garlic Bread', isDeal: true },
+    { id: 'ad4', category: 'deals', title: 'Deal for 4 Person', price: 2899, desc: '2 Regular Pizza (any flavour), 8 Pcs Oven Baked Wings, 4 Pcs Hot Garlic Bread', isDeal: true },
+    { id: 'ad5', category: 'deals', title: 'Deal for 6 Person', price: 4199, desc: '2 Large Pizza (any flavour), 12 Pcs Oven Baked Wings, 4 Pcs Hot Garlic Bread', isDeal: true },
+
+    // Hot Beverages
+    { id: 'hb1', category: 'hot_beverages', title: 'Hot Tea', price: 150 },
+    { id: 'hb2', category: 'hot_beverages', title: 'Green Tea', price: 150 },
+    { id: 'hb3', category: 'hot_beverages', title: 'Karak Chaye', price: 150 },
+    { id: 'hb4', category: 'hot_beverages', title: 'Cardamom Tea', price: 150 },
+    { id: 'hb5', category: 'hot_beverages', title: 'Black Coffee', price: 180 },
+    { id: 'hb6', category: 'hot_beverages', title: 'Cappuccino', price: 280, isBestSeller: true },
+    { id: 'hb7', category: 'hot_beverages', title: 'Latte', price: 280 },
+
+    // Sandwich
+    { id: 'sw1', category: 'sandwich', title: 'Chaudhary Special Sandwich', price: 750, isBestSeller: true },
+    { id: 'sw2', category: 'sandwich', title: 'Malai Boti Sandwich', price: 800 },
+
+    // Kids Meal
+    { id: 'km1', category: 'kids_meal', title: 'Kids Meal Combo', price: 599, desc: 'Age Limit 10 Year. Choose one option.', hasSizes: true, sizes: [ {name: '10 Pcs Nuggets Combo', price: 599}, {name: '1 Small Pizza Combo', price: 599}, {name: '1 Small Pasta Combo', price: 599}, {name: 'Chicken Burger Combo', price: 599} ]},
+
+    // Lunch & Midnight Deals
+    { id: 'lmd1', category: 'deals', title: 'Lunch/Midnight Deal 1', isTimeRestricted: true, isDeal: true, price: 580, hasSizes: true, sizes: [ {name: 'Non Special', price: 580}, {name: 'Special', price: 650} ], desc: '(12-4 PM & 11PM-2AM) 1 Small Pizza, 1 Regular Drink' },
+    { id: 'lmd2', category: 'deals', title: 'Lunch/Midnight Deal 2', isTimeRestricted: true, isDeal: true, price: 1120, hasSizes: true, sizes: [ {name: 'Non Special', price: 1120}, {name: 'Special', price: 1280} ], desc: '(12-4 PM & 11PM-2AM) 1 Medium Pizza, 1 Drink 500 ml' },
+    { id: 'lmd3', category: 'deals', title: 'Lunch/Midnight Deal 3', isTimeRestricted: true, isDeal: true, price: 1480, hasSizes: true, sizes: [ {name: 'Non Special', price: 1480}, {name: 'Special', price: 1720} ], desc: '(12-4 PM & 11PM-2AM) 1 Large Pizza, 1 Drink 1.5 Ltr' },
+    { id: 'lmd4', category: 'deals', title: 'Lunch/Midnight Deal 4', isTimeRestricted: true, isDeal: true, price: 2960, hasSizes: true, sizes: [ {name: 'Non Special', price: 2960}, {name: 'Special', price: 3300} ], desc: '(12-4 PM & 11PM-2AM) 2 Large Pizzas, 1 Drink 1.5 Ltr' },
+    { id: 'lmd5', category: 'deals', title: 'Lunch/Midnight Deal 5', isTimeRestricted: true, isDeal: true, price: 2399, hasSizes: true, sizes: [ {name: 'Non Special', price: 2399}, {name: 'Special', price: 2550} ], desc: '(12-4 PM & 11PM-2AM) 1 Extra Large Pizza, 1 Drink 1.5 Ltr' },
+
+    // Square Pizza Deals
+    { id: 'sqd1', category: 'deals', title: 'Square Deal 1', price: 680, isDeal: true, desc: '1 Small Square Pizza, 1 Regular Drink' },
+    { id: 'sqd2', category: 'deals', title: 'Square Deal 2', price: 1430, isDeal: true, desc: '1 Medium Square Pizza, 1 Drink 500 ml' },
+    { id: 'sqd3', category: 'deals', title: 'Square Deal 3', price: 1999, isDeal: true, desc: '1 Large Square Pizza, 1 Drink 1.5 Ltr' }
+];
+
+// Global price overrides (loaded from Supabase on init)
+let globalPriceOverrides = {};
+
+// Helper to get actual price (with Supabase overrides applied)
+function getMenuData() {
+    return rawMenuData.map(item => {
+        let cloned = JSON.parse(JSON.stringify(item));
+        let ov = globalPriceOverrides[cloned.id];
+        if (ov) {
+            cloned.price = ov.price || cloned.price;
+            if (cloned.hasSizes && ov.sizes) {
+                cloned.sizes = ov.sizes;
+            }
+        }
+        return cloned;
+    });
+}
+
+// Load prices from Supabase app_settings table
+async function loadPricesFromSupabase() {
+    if (!supabaseClient) return;
+    try {
+        const { data, error } = await supabaseClient
+            .from('app_settings')
+            .select('setting_value')
+            .eq('setting_key', 'price_overrides')
+            .single();
+        if (!error && data && data.setting_value) {
+            globalPriceOverrides = data.setting_value;
+        }
+    } catch(e) {
+        console.warn('Could not load price overrides from Supabase:', e);
+    }
+}
+
+// Time Restriction Checker
+function isDealTimeActive() {
+    let now = new Date();
+    let h = now.getHours();
+    let isLunch = h >= 12 && h < 16; // 12 PM to 4 PM
+    let isMidnight = h >= 23 || h < 2; // 11 PM to 2 AM
+    return isLunch || isMidnight;
+}
+
+function getDeals() {
+    return getMenuData().filter(item => item.isDeal);
+}
+
+function getBestSellers() {
+    return getMenuData().filter(item => item.isBestSeller);
+}
+
+
+/* --- APP STATE & LOGIC --- */
+const app = {
+    cart: [],
+    currentUser: null,
+    currentOrderType: 'delivery',
+    selectedAddress: null,
+    addresses: [],
+    sliderInterval: null,
+
+    init: async function () {
+        this.loadCart();
+        this.loadTheme();
+        this.setupSlider();
+        this.checkAuth();
+        this.renderAddresses();
+
+        // Load latest prices from Supabase FIRST
+        await loadPricesFromSupabase();
+
+        // Listen to Supabase Auth state changes if configured
+        if (supabaseClient) {
+            supabaseClient.auth.onAuthStateChange((event, session) => {
+                if (session && event === 'SIGNED_IN') {
+                    this.currentUser = session.user;
+                    this.updateUserUI();
+                    this.loadUserAddresses();
+                    this.closeAuthModal();
+                } else if (event === 'SIGNED_OUT') {
+                    this.currentUser = null;
+                    this.updateUserUI();
+                }
+            });
+        } else {
+            // Mock persistent user for demo without Supabase
+            let savedUser = localStorage.getItem('ch_user');
+            if (savedUser) {
+                this.currentUser = JSON.parse(savedUser);
+                this.updateUserUI();
+            }
+        }
+
+        // Add event listeners for cart outside clicks
+        document.body.addEventListener('click', (e) => {
+            if (e.target.closest('.item-price-tag')) { e.preventDefault(); }
+        });
+    },
+
+    // Navigation & Views
+    navigateTo: function (store) {
+        document.getElementById('splash-screen').classList.remove('active');
+        document.getElementById('main-app').classList.add('active');
+
+        if (store === 'fast-food') {
+            this.openView('view-fast-food');
+            this.renderHomeViews();
+        } else if (store === 'bakery') {
+            this.openView('view-bakery');
+        } else {
+            this.openView('view-grocery');
+        }
+    },
+
+    openView: function (viewId, closeDrawers = false) {
+        if (closeDrawers) this.closeDrawer();
+        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+        document.getElementById(viewId).classList.add('active');
+
+        if (viewId === 'view-menu-categories') {
+            this.renderMenuCategoriesView();
+        } else if (viewId === 'view-checkout') {
+            this.renderCheckoutView();
+        } else if (viewId === 'view-orders') {
+            this.renderOrdersHistory();
+        }
+    },
+
+    goBack: function () {
+        this.openView('view-fast-food');
+    },
+
+    setOrderType: function (type) {
+        this.currentOrderType = type;
+        document.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById(`btn-${type}`).classList.add('active');
+
+        if (type === 'pickup') {
+            document.getElementById('header-address-text').innerText = 'Store Pickup';
+        } else {
+            let addr = this.selectedAddress ? this.selectedAddress.text : 'Select Address...';
+            document.getElementById('header-address-text').innerText = addr;
+        }
+        this.renderCheckoutView(); // Re-render if in checkout
+    },
+
+    toggleTheme: function () {
+        let isNight = document.body.classList.contains('night-theme');
+        if (isNight) {
+            document.body.classList.remove('night-theme');
+            document.body.classList.add('light-theme');
+            localStorage.setItem('ch_theme', 'light');
+            document.querySelectorAll('.theme-opt').forEach(el => el.classList.remove('active'));
+            document.querySelector('.theme-opt.day').classList.add('active');
+        } else {
+            document.body.classList.remove('light-theme');
+            document.body.classList.add('night-theme');
+            localStorage.setItem('ch_theme', 'night');
+            document.querySelectorAll('.theme-opt').forEach(el => el.classList.remove('active'));
+            document.querySelector('.theme-opt.night').classList.add('active');
+        }
+    },
+
+    loadTheme: function () {
+        let saved = localStorage.getItem('ch_theme');
+        if (saved === 'night') {
+            this.toggleTheme(); // swap to night
+        }
+    },
+
+    // Rendering Data
+    renderHomeViews: function () {
+        // Render Explore Categories
+        let exploreGrid = document.getElementById('explore-grid');
+        exploreGrid.innerHTML = '';
+        categories.slice(0, 4).forEach(cat => {
+            exploreGrid.innerHTML += `
+                <div class="cat-card" onclick="app.openCategoryMenu('${cat.id}', '${cat.name}')">
+                    <img src="${cat.icon}" onerror="this.src='https://cdn-icons-png.flaticon.com/512/3413/3413645.png'" alt="${cat.name}">
+                    <h4>${cat.name}</h4>
+                </div>
+            `;
+        });
+
+        // Render Best Sellers
+        let bestGrid = document.getElementById('best-sellers-scroll');
+        bestGrid.innerHTML = '';
+        getBestSellers().forEach(item => {
+            bestGrid.innerHTML += `
+                <div class="item-card-v" onclick="app.openItemDetail('${item.id}')">
+                    <div class="ribbon"><div class="ribbon-blocks"><div class="ribbon-block"></div><div class="ribbon-block"></div><div class="ribbon-block"></div></div></div>
+                    <div class="item-img-placeholder"></div>
+                    <h4>${item.title}</h4>
+                    <span class="item-price-tag">Rs ${item.price}</span>
+                </div>
+            `;
+        });
+
+        // Render Deals
+        let dealsList = document.getElementById('top-deals-list');
+        dealsList.innerHTML = '';
+        let deals = getDeals();
+        if (deals.length === 0) { dealsList.innerHTML = '<p class="text-muted">No deals currently available.</p>'; }
+        deals.forEach(deal => {
+            dealsList.innerHTML += `
+                <div class="deal-card">
+                    <img class="deal-img" src="https://images.unsplash.com/photo-1594221708734-ea4cb0e564eb?w=500&q=80" alt="${deal.title}">
+                    <div class="deal-info">
+                        <h4>${deal.title}</h4>
+                        <p>${deal.desc || ''}</p>
+                        <div class="deal-bottom">
+                            <span class="price">Rs ${deal.price}</span>
+                            <button class="btn-view" onclick="app.openItemDetail('${deal.id}')">VIEW</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+    },
+
+    renderMenuCategoriesView: function () {
+        let list = document.getElementById('category-items-list');
+        list.innerHTML = '';
+        document.getElementById('category-page-title').innerText = 'Explore Menu';
+
+        categories.forEach(cat => {
+            list.innerHTML += `
+                <div class="cat-card" style="flex-direction:row; height:auto; padding:20px; text-align:left; gap:20px;" onclick="app.openCategoryMenu('${cat.id}', '${cat.name}')">
+                    <img src="${cat.icon}" style="width:50px; height:50px; margin:0;" onerror="this.src='https://cdn-icons-png.flaticon.com/512/3413/3413645.png'" alt="${cat.name}">
+                    <h4 style="font-size:1.1rem;">${cat.name}</h4>
+                    <i class="fa-solid fa-chevron-right ms-auto"></i>
+                </div>
+            `;
+        });
+    },
+
+    openCategoryMenu: function (catId, catName) {
+        document.getElementById('category-page-title').innerText = catName;
+        let list = document.getElementById('category-items-list');
+        list.innerHTML = '';
+
+        let items = getMenuData().filter(i => i.category === catId);
+        if (items.length === 0) {
+            list.innerHTML = `<p class="text-center text-muted mt-4">Menu items coming soon.</p>`;
+            return;
+        }
+
+        items.forEach(item => {
+            let priceDisp = item.hasSizes || item.type === 'pizza' ? `Starting Rs ${item.sizes?.[0]?.price || item.price}` : `Rs ${item.price}`;
+            list.innerHTML += `
+                <div class="deal-card" onclick="app.openItemDetail('${item.id}')" style="cursor:pointer;">
+                    <div class="item-img-placeholder" style="margin:0; width:80px; height:80px;"></div>
+                    <div class="deal-info">
+                        <h4>${item.title}</h4>
+                        <p>${item.desc || ''}</p>
+                        <div class="deal-bottom">
+                            <span class="price text-danger">${priceDisp}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+    },
+
+    // Item Detail Modal & ADD TO CART
+    openItemDetail: function (itemId) {
+        let item = getMenuData().find(i => i.id === itemId);
+        if (!item) return;
+
+        if (item.isTimeRestricted && !isDealTimeActive()) {
+            this.showToast('This deal is only available during Lunch (12pm-4pm) & Midnight (11pm-2am).');
+            return;
+        }
+
+        let content = document.getElementById('item-modal-content');
+
+        let html = `
+            <div class="item-img-placeholder" style="width:100%; height:150px; background:#f0f0f0; margin-bottom:15px; border-radius:12px;"></div>
+            <h3 class="item-detail-title">${item.title}</h3>
+            <p class="item-detail-desc">${item.desc || ''}</p>
+        `;
+
+        // Handle Options
+        if (item.type === 'pizza') {
+            html += `<input type="hidden" id="modal-item-id" value="${item.id}">`;
+
+            // Flavor selection
+            html += `<div class="options-group"><h5>Select Flavor</h5><div class="radio-tile-group">`;
+            item.flavors.forEach((flv, idx) => {
+                let sel = idx === 0 ? 'selected' : '';
+                html += `<label class="radio-tile ${sel}" onclick="app.selectTile(this, 'flavor')">
+                            <input type="radio" name="flavor" value="${flv}" ${idx === 0 ? 'checked' : ''}>
+                            <span class="tile-label">${flv}</span>
+                         </label>`;
+            });
+            html += `</div></div>`;
+
+            // Size selection
+            html += `<div class="options-group"><h5>Select Size</h5><div class="radio-tile-group">`;
+            item.sizes.forEach((sz, idx) => {
+                let sel = idx === 0 ? 'selected' : '';
+                html += `<label class="radio-tile ${sel}" onclick="app.selectTile(this, 'size'); app.updateModalPrice(${sz.price})">
+                            <input type="radio" name="size" value="${sz.name}|${sz.price}" ${idx === 0 ? 'checked' : ''}>
+                            <span class="tile-label">${sz.name}</span>
+                            <span class="tile-price">Rs ${sz.price}</span>
+                         </label>`;
+            });
+            html += `</div></div>`;
+
+            html += `
+                <div style="display:flex; gap:15px; margin-top:20px;">
+                    <button class="btn btn-primary w-100" onclick="app.addItemToCart()">Add to Bucket - Rs <span id="modal-final-price">${item.sizes[0].price}</span></button>
+                </div>
+            `;
+        } else if (item.hasSizes) {
+            html += `<input type="hidden" id="modal-item-id" value="${item.id}">`;
+            html += `<div class="options-group"><h5>Select Size</h5><div class="radio-tile-group">`;
+            item.sizes.forEach((sz, idx) => {
+                let sel = idx === 0 ? 'selected' : '';
+                html += `<label class="radio-tile ${sel}" onclick="app.selectTile(this, 'size'); app.updateModalPrice(${sz.price})">
+                            <input type="radio" name="size" value="${sz.name}|${sz.price}" ${idx === 0 ? 'checked' : ''}>
+                            <span class="tile-label">${sz.name}</span>
+                            <span class="tile-price">Rs ${sz.price}</span>
+                         </label>`;
+            });
+            html += `</div></div>`;
+            html += `
+                <div style="display:flex; gap:15px; margin-top:20px;">
+                    <button class="btn btn-primary w-100" onclick="app.addItemToCart()">Add to Bucket - Rs <span id="modal-final-price">${item.sizes[0].price}</span></button>
+                </div>
+            `;
+        } else {
+            html += `<input type="hidden" id="modal-item-id" value="${item.id}">`;
+            html += `<input type="hidden" name="size" value="Regular|${item.price}">`;
+            html += `
+                <div style="display:flex; gap:15px; margin-top:20px;">
+                    <button class="btn btn-primary w-100" onclick="app.addItemToCart()">Add to Bucket - Rs <span id="modal-final-price">${item.price}</span></button>
+                </div>
+            `;
+        }
+
+        content.innerHTML = html;
+        document.getElementById('item-modal').classList.add('active');
+        document.getElementById('item-modal-overlay').classList.add('active');
+        document.body.style.overflow = 'hidden';
+    },
+
+    closeItemModal: function () {
+        document.getElementById('item-modal').classList.remove('active');
+        document.getElementById('item-modal-overlay').classList.remove('active');
+        document.body.style.overflow = '';
+    },
+
+    selectTile: function (element, groupName) {
+        let parent = element.closest('.radio-tile-group');
+        parent.querySelectorAll('.radio-tile').forEach(el => el.classList.remove('selected'));
+        element.classList.add('selected');
+        let radio = element.querySelector('input');
+        radio.checked = true;
+    },
+
+    updateModalPrice: function (price) {
+        document.getElementById('modal-final-price').innerText = price;
+    },
+
+    // Cart Logic
+    addItemToCart: function () {
+        let itemId = document.getElementById('modal-item-id').value;
+        let item = getMenuData().find(i => i.id === itemId);
+
+        let flavorNode = document.querySelector('input[name="flavor"]:checked');
+        let sizeNode = document.querySelector('input[name="size"]:checked');
+
+        let flavor = flavorNode ? flavorNode.value : '';
+        let sizeData = sizeNode ? sizeNode.value.split('|') : ['Regular', item.price];
+
+        let cartItem = {
+            id: String(Date.now()),
+            itemId: item.id,
+            title: item.title,
+            variant: (flavor ? flavor + ' - ' : '') + sizeData[0],
+            price: parseInt(sizeData[1]),
+            quantity: 1
+        };
+
+        // Check if identical item exists
+        let existing = this.cart.find(i => i.itemId === cartItem.itemId && i.variant === cartItem.variant);
+        if (existing) {
+            existing.quantity += 1;
+        } else {
+            this.cart.push(cartItem);
+        }
+
+        this.saveCart();
+        this.closeItemModal();
+        this.showToast('Item added to bucket');
+    },
+
+    removeCartItem: function (cartId) {
+        this.cart = this.cart.filter(i => i.id !== cartId);
+        this.saveCart();
+        if (document.getElementById('cart-sheet').classList.contains('active')) {
+            this.renderCartSheet(); // Refresh
+        }
+    },
+
+    updateCartQty: function (cartId, delta) {
+        let item = this.cart.find(i => i.id === cartId);
+        if (item) {
+            item.quantity += delta;
+            if (item.quantity <= 0) {
+                this.removeCartItem(cartId);
+            } else {
+                this.saveCart();
+                this.renderCartSheet();
+            }
+        }
+    },
+
+    saveCart: function () {
+        localStorage.setItem('ch_cart', JSON.stringify(this.cart));
+        this.updateCartUI();
+    },
+
+    loadCart: function () {
+        try {
+            this.cart = JSON.parse(localStorage.getItem('ch_cart')) || [];
+        } catch (e) { this.cart = []; }
+        this.updateCartUI();
+    },
+
+    updateCartUI: function () {
+        let totalQty = this.cart.reduce((s, i) => s + i.quantity, 0);
+        let totalPrice = this.cart.reduce((s, i) => s + (i.price * i.quantity), 0);
+
+        let cartEl = document.getElementById('floating-cart');
+        document.getElementById('cart-badge').innerText = totalQty;
+        document.getElementById('cart-total-text').innerText = totalPrice;
+
+        if (totalQty > 0) {
+            cartEl.classList.add('visible');
+        } else {
+            cartEl.classList.remove('visible');
+            this.closeCartSheet();
+        }
+    },
+
+    openCartSheet: function () {
+        if (this.cart.length === 0) return;
+        this.renderCartSheet();
+        document.getElementById('cart-sheet').classList.add('active');
+        document.getElementById('cart-overlay').classList.add('active');
+        document.body.style.overflow = 'hidden';
+    },
+
+    closeCartSheet: function () {
+        document.getElementById('cart-sheet').classList.remove('active');
+        document.getElementById('cart-overlay').classList.remove('active');
+        document.body.style.overflow = '';
+    },
+
+    renderCartSheet: function () {
+        let list = document.getElementById('cart-items-list');
+        list.innerHTML = '';
+        let totalPrice = 0;
+
+        this.cart.forEach(item => {
+            totalPrice += item.price * item.quantity;
+            list.innerHTML += `
+                <div class="cart-item">
+                    <div class="cart-item-info">
+                        <div class="cart-item-title">${item.title}</div>
+                        <div class="cart-item-variant">${item.variant}</div>
+                        <div class="cart-item-price">Rs ${item.price}</div>
+                    </div>
+                    <div class="qty-controls">
+                        <button class="qty-btn" onclick="app.updateCartQty('${item.id}', -1)"><i class="fa-solid fa-minus"></i></button>
+                        <span>${item.quantity}</span>
+                        <button class="qty-btn" onclick="app.updateCartQty('${item.id}', 1)"><i class="fa-solid fa-plus"></i></button>
+                    </div>
+                </div>
+            `;
+        });
+        document.getElementById('cart-sheet-total').innerText = totalPrice;
+    },
+
+    proceedToCheckout: function () {
+        this.closeCartSheet();
+        this.openView('view-checkout', true);
+    },
+
+    renderCheckoutView: function () {
+        let list = document.getElementById('checkout-items');
+        list.innerHTML = '';
+        let total = 0;
+        this.cart.forEach(item => {
+            let rowTotal = item.price * item.quantity;
+            total += rowTotal;
+            list.innerHTML += `
+                <div style="display:flex; justify-content:space-between; margin-bottom:5px; font-size:0.9rem;">
+                    <span>${item.quantity}x ${item.title} <small class="text-muted">(${item.variant})</small></span>
+                    <span>Rs ${rowTotal}</span>
+                </div>
+            `;
+        });
+
+        document.getElementById('checkout-subtotal').innerText = `Rs ${total}`;
+        let fee = this.currentOrderType === 'delivery' ? 50 : 0;
+        document.getElementById('checkout-delivery-fee').innerText = `Rs ${fee}`;
+        document.getElementById('checkout-total').innerText = `Rs ${total + fee}`;
+
+        // Address Display
+        if (this.currentOrderType === 'pickup') {
+            document.getElementById('checkout-address').innerText = "Store Pickup (Default Branch)";
+        } else {
+            let addT = this.selectedAddress ? this.selectedAddress.text : 'Click to select delivery address';
+            document.getElementById('checkout-address').innerText = addT;
+        }
+    },
+
+    placeOrder: async function () {
+        if (this.cart.length === 0) return this.showToast('Cart is empty');
+        if (!this.currentUser) {
+            this.showToast('Please login to place order');
+            this.openAuthModal();
+            return;
+        }
+        if (this.currentOrderType === 'delivery' && !this.selectedAddress) {
+            return this.showToast('Please select a delivery address');
+        }
+
+        let total = this.cart.reduce((s, i) => s + (i.price * i.quantity), 0);
+        let order = {
+            id: 'ORD' + Math.floor(100000 + Math.random() * 900000), // Random 6 digit
+            user: this.currentUser.email || 'Customer',
+            type: this.currentOrderType,
+            address: this.currentOrderType === 'delivery' ? this.selectedAddress.text : 'Store Pickup',
+            items: JSON.parse(JSON.stringify(this.cart)),
+            total: total + (this.currentOrderType === 'delivery' ? 50 : 0),
+            date: new Date().toISOString(),
+            status: 'Pending'
+        };
+
+        // Save order to Supabase (primary) and localStorage as backup
+        if (supabaseClient) {
+            const { error } = await supabaseClient.from('orders').insert([order]);
+            if (error) {
+                console.error('Supabase order save error:', error);
+                // fallback to localStorage
+                let orders = JSON.parse(localStorage.getItem('ch_orders')) || [];
+                orders.push(order);
+                localStorage.setItem('ch_orders', JSON.stringify(orders));
+            }
+        } else {
+            // No Supabase: use localStorage
+            let orders = JSON.parse(localStorage.getItem('ch_orders')) || [];
+            orders.push(order);
+            localStorage.setItem('ch_orders', JSON.stringify(orders));
+        }
+
+        this.cart = [];
+        this.saveCart();
+        this.showToast('Order Placed Successfully!');
+
+        setTimeout(() => {
+            this.goBack();
+        }, 1500);
+    },
+
+    renderOrdersHistory: async function () {
+        let list = document.getElementById('my-orders-list');
+        list.innerHTML = '<p class="text-center text-muted">Loading...</p>';
+
+        if (!this.currentUser) {
+            list.innerHTML = '<p class="text-center text-muted">Please log in to view orders</p>';
+            return;
+        }
+
+        let myOrders = [];
+
+        if (supabaseClient) {
+            const { data, error } = await supabaseClient
+                .from('orders')
+                .select('*')
+                .eq('user', this.currentUser.email)
+                .order('date', { ascending: false });
+            if (!error && data) myOrders = data;
+        } else {
+            // fallback
+            let orders = JSON.parse(localStorage.getItem('ch_orders')) || [];
+            myOrders = orders.filter(o => o.user === this.currentUser.email).reverse();
+        }
+
+        list.innerHTML = '';
+        if (myOrders.length === 0) {
+            list.innerHTML = '<p class="text-center text-muted">No orders found.</p>';
+            return;
+        }
+
+        myOrders.forEach(o => {
+            let itemsSummary = (o.items || []).map(i => `${i.quantity}x ${i.title}`).join(', ');
+            let dateStr = new Date(o.date).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+            list.innerHTML += `
+                <div class="order-card">
+                    <div class="order-header">
+                        <span class="order-id">#${o.id}</span>
+                        <span class="order-status ${o.status === 'Pending' ? 'pending' : ''}">${o.status}</span>
+                    </div>
+                    <div class="order-items-preview">${itemsSummary}</div>
+                    <div class="order-footer">
+                        <span style="font-weight:normal; font-size:0.85rem; color:var(--text-muted)">${dateStr}</span>
+                        <span class="text-danger">Rs ${o.total}</span>
+                    </div>
+                </div>
+            `;
+        });
+    },
+
+    // UI Helpers
+    showToast: function (msg) {
+        let toast = document.getElementById('toast');
+        toast.innerText = msg;
+        toast.classList.add('show');
+        setTimeout(() => toast.classList.remove('show'), 3000);
+    },
+
+    openDrawer: function () {
+        document.getElementById('side-drawer').classList.add('active');
+        document.getElementById('drawer-overlay').classList.add('active');
+        document.body.style.overflow = 'hidden';
+    },
+
+    closeDrawer: function () {
+        document.getElementById('side-drawer').classList.remove('active');
+        document.getElementById('drawer-overlay').classList.remove('active');
+        document.body.style.overflow = '';
+    },
+
+    setupSlider: function () {
+        let currentSlide = 0;
+        let wrap = document.querySelector('.slider-wrap');
+        let dots = document.querySelector('.slider-dots');
+        let total = 3;
+
+        // Create dots
+        for (let i = 0; i < total; i++) {
+            dots.innerHTML += `<div class="dot ${i === 0 ? 'active' : ''}"></div>`;
+        }
+
+        this.sliderInterval = setInterval(() => {
+            currentSlide = (currentSlide + 1) % total;
+            wrap.style.transform = `translateX(-${currentSlide * 100}%)`;
+            document.querySelectorAll('.dot').forEach((d, i) => {
+                d.className = i === currentSlide ? 'dot active' : 'dot';
+            });
+        }, 5000);
+    },
+
+    // Auth Logic
+    openAuthModal: function () {
+        this.closeDrawer();
+        document.getElementById('auth-modal').classList.add('active');
+        document.getElementById('auth-overlay').classList.add('active');
+        this.switchAuthTab('login');
+        document.getElementById('auth-error').style.display = 'none';
+        document.getElementById('auth-success').style.display = 'none';
+    },
+
+    closeAuthModal: function () {
+        document.getElementById('auth-modal').classList.remove('active');
+        document.getElementById('auth-overlay').classList.remove('active');
+    },
+
+    switchAuthTab: function (tab) {
+        document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.auth-form').forEach(f => f.classList.remove('active'));
+
+        if (tab === 'login') {
+            document.querySelectorAll('.auth-tab')[0].classList.add('active');
+            document.getElementById('auth-login-form').classList.add('active');
+        } else {
+            document.querySelectorAll('.auth-tab')[1].classList.add('active');
+            document.getElementById('auth-signup-form').classList.add('active');
+        }
+    },
+
+    checkAuth: function () {
+        // Already handled in init via persistent localStorage or supabase session
+    },
+
+    updateUserUI: function () {
+        let nameEl = document.getElementById('drawer-user-name');
+        let emailEl = document.getElementById('drawer-user-email');
+        let logoutBtn = document.getElementById('btn-logout');
+
+        if (this.currentUser) {
+            nameEl.innerText = 'Welcome Back';
+            emailEl.innerText = this.currentUser.email || this.currentUser.username;
+            emailEl.onclick = null;
+            logoutBtn.style.display = 'flex';
+        } else {
+            nameEl.innerText = 'Guest User';
+            emailEl.innerText = 'Login / Sign Up';
+            emailEl.onclick = () => this.openAuthModal();
+            logoutBtn.style.display = 'none';
+        }
+    },
+
+    signup: async function () {
+        let email = document.getElementById('signup-email').value;
+        let pwd = document.getElementById('signup-password').value;
+        let confirm = document.getElementById('signup-confirm-password').value;
+        let err = document.getElementById('auth-error');
+        err.style.display = 'none';
+
+        if (!email || !pwd) { err.innerText = 'Fill all fields'; err.style.display = 'block'; return; }
+        if (pwd !== confirm) { err.innerText = 'Passwords do not match'; err.style.display = 'block'; return; }
+
+        let btn = document.getElementById('btn-signup');
+        let originalText = btn.innerHTML;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Creating...';
+        btn.disabled = true;
+
+        try {
+            if (!supabaseClient) {
+                // Mock Signup
+                this.currentUser = { email: email, username: email };
+                localStorage.setItem('ch_user', JSON.stringify(this.currentUser));
+                this.showToast('Account Created (Mock Mode)');
+                this.closeAuthModal();
+                this.updateUserUI();
+                return;
+            }
+
+            const { data, error } = await supabaseClient.auth.signUp({ email: email, password: pwd });
+            if (error) {
+                let msg = error.message || error.toString();
+                err.innerText = msg === '[object Object]' ? 'Network or Server Error. Please Try Again.' : msg;
+                err.style.display = 'block';
+            } else {
+                // Show OTP Form
+                document.querySelectorAll('.auth-form').forEach(f => f.classList.remove('active'));
+                document.getElementById('auth-otp-form').classList.add('active');
+                this.tempEmail = email; // Store for OTP verification hint
+                document.getElementById('auth-success').innerText = 'OTP sent to email. Please verify.';
+                document.getElementById('auth-success').style.display = 'block';
+            }
+        } catch (e) {
+            let msg = e.message || e.toString();
+            err.innerText = msg === '[object Object]' ? 'Network connection failed' : msg;
+            err.style.display = 'block';
+        } finally {
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        }
+    },
+
+    verifyOTP: async function () {
+        let otp = document.getElementById('otp-code').value;
+        let err = document.getElementById('auth-error');
+        if (!otp) return;
+
+        let btn = document.getElementById('btn-verify-otp');
+        let originalText = btn.innerHTML;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Verifying...';
+        btn.disabled = true;
+
+        if (!supabaseClient) { btn.disabled = false; btn.innerHTML = originalText; return; }
+
+        try {
+            const { data, error } = await supabaseClient.auth.verifyOtp({
+                email: this.tempEmail,
+                token: otp,
+                type: 'signup'
+            });
+
+            if (error) {
+                let msg = error.message || (typeof error === 'object' ? JSON.stringify(error) : error);
+                err.innerText = msg; err.style.display = 'block';
+            } else {
+                this.showToast('Email verified! You are logged in.');
+                this.closeAuthModal();
+            }
+        } catch (e) {
+            let msg = e.message || e.toString();
+            err.innerText = msg === '[object Object]' ? 'Network Error' : msg;
+            err.style.display = 'block';
+        } finally {
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        }
+    },
+
+    login: async function () {
+        let email = document.getElementById('login-email').value;
+        let pwd = document.getElementById('login-password').value;
+        let err = document.getElementById('auth-error');
+        err.style.display = 'none';
+
+        let btn = document.getElementById('btn-login');
+        let originalText = btn.innerHTML;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Logging in...';
+        btn.disabled = true;
+
+        try {
+            if (!supabaseClient) {
+                // Mock Login
+                this.currentUser = { email: email, username: email };
+                localStorage.setItem('ch_user', JSON.stringify(this.currentUser));
+                this.showToast('Logged In (Mock Mode)');
+                this.closeAuthModal();
+                this.updateUserUI();
+                return;
+            }
+
+            const { data, error } = await supabaseClient.auth.signInWithPassword({ email: email, password: pwd });
+            if (error) {
+                let msg = error.message || (typeof error === 'object' ? JSON.stringify(error) : error);
+                err.innerText = msg; err.style.display = 'block';
+            } else {
+                this.showToast('Login successful');
+                // user state updated via listener
+            }
+        } catch (e) {
+            let msg = e.message || e.toString();
+            err.innerText = msg === '[object Object]' ? 'Network error' : msg;
+            err.style.display = 'block';
+        } finally {
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        }
+    },
+
+    logout: async function () {
+        if (supabaseClient) {
+            await supabaseClient.auth.signOut();
+        } else {
+            localStorage.removeItem('ch_user');
+            this.currentUser = null;
+            this.updateUserUI();
+        }
+        this.closeDrawer();
+        this.showToast('Logged Out');
+    },
+
+    // Address Book Logic
+    openAddressModal: function () {
+        this.closeDrawer();
+        document.getElementById('address-modal').classList.add('active');
+        document.getElementById('address-overlay').classList.add('active');
+        this.renderAddresses();
+    },
+
+    closeAddressModal: function () {
+        document.getElementById('address-modal').classList.remove('active');
+        document.getElementById('address-overlay').classList.remove('active');
+    },
+
+    loadUserAddresses: function () {
+        let saved = localStorage.getItem('ch_addresses_' + (this.currentUser ? this.currentUser.email : 'guest'));
+        if (saved) this.addresses = JSON.parse(saved);
+        else this.addresses = [];
+        this.renderAddresses();
+    },
+
+    saveNewAddress: function () {
+        let city = document.getElementById('new-address-city').value;
+        let area = document.getElementById('new-address-area').value;
+        let landmark = document.getElementById('new-address-landmark').value;
+
+        if (!area || !landmark) {
+            this.showToast('Please enter Colony and Landmark');
+            return;
+        }
+
+        let txt = `${area}, Near ${landmark}, ${city}`;
+
+        let newAddr = { id: Date.now(), text: txt };
+        this.addresses.push(newAddr);
+        this.selectedAddress = newAddr;
+
+        // Save
+        let key = 'ch_addresses_' + (this.currentUser ? this.currentUser.email : 'guest');
+        localStorage.setItem(key, JSON.stringify(this.addresses));
+
+        // Update UI
+        document.getElementById('new-address-area').value = '';
+        document.getElementById('new-address-landmark').value = '';
+        this.setOrderType('delivery'); // Selects delivery and updates text
+        this.closeAddressModal();
+        this.showToast('Address Saved');
+    },
+
+    renderAddresses: function () {
+        let list = document.getElementById('address-list');
+        list.innerHTML = '';
+        if (this.addresses.length === 0) {
+            list.innerHTML = '<p class="text-sm text-muted">No saved addresses</p>';
+            return;
+        }
+        this.addresses.forEach(a => {
+            let active = this.selectedAddress && this.selectedAddress.id === a.id ? 'font-bold text-danger' : '';
+            list.innerHTML += `
+                <div style="padding:10px; border:1px solid var(--border-color); border-radius:8px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="app.selectAddress(${a.id})">
+                    <span class="${active}">${a.text}</span>
+                    <i class="fa-solid fa-chevron-right text-muted"></i>
+                </div>
+            `;
+        });
+    },
+
+    selectAddress: function (id) {
+        let addr = this.addresses.find(a => a.id === id);
+        if (addr) {
+            this.selectedAddress = addr;
+            this.setOrderType('delivery');
+            this.closeAddressModal();
+        }
+    }
+};
+
+// Initialize app when DOM loads
+window.addEventListener('DOMContentLoaded', () => {
+    app.init();
+});
